@@ -1,5 +1,7 @@
 """Signal parsing for breaker agent output."""
 
+import re
+
 _TOKEN_CLEAR = "ETCH_ALL_CLEAR"
 _TOKEN_ISSUES = "ETCH_ISSUES_FOUND"
 _PUNCTUATION_ONLY = set("-=*_`~><|")
@@ -78,19 +80,18 @@ def extract_commit_message(output: str, fallback: str) -> str:
 
 
 def extract_summary(output: str) -> str:
-    """Extract the ETCH_SUMMARY line written by an agent.
+    """Extract the summary from an <etch_summary> tag in agent output.
 
-    Agents are prompted to write a line like:
-        ETCH_SUMMARY: fixed 3 null-guard issues in auth.py
+    Agents are prompted to write:
+        <etch_summary>fixed 3 null-guard issues in auth.py</etch_summary>
 
     Returns the summary text, or empty string if not found.
     """
     if not isinstance(output, str):
         return ""
-    for line in output.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("ETCH_SUMMARY:"):
-            return stripped[len("ETCH_SUMMARY:"):].strip()
+    m = re.search(r"<etch_summary>(.*?)</etch_summary>", output, re.DOTALL)
+    if m:
+        return m.group(1).strip()
     return ""
 
 

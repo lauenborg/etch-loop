@@ -24,9 +24,6 @@ Focus on: [edit this to narrow your scope, e.g. "src/auth/", "the payment module
 
 ## Terminal output (required)
 
-After making changes (or deciding there is nothing to fix), write this line — it appears directly in the terminal and is used as the commit message:
-  `ETCH_SUMMARY: <one sentence, max 80 chars>`
-
-Examples:
-  `ETCH_SUMMARY: fixed 3 issues — null guard in auth.py, bounds check in parser.py, timeout in agent.py`
-  `ETCH_SUMMARY: nothing to fix — all reported issues were already handled`
+After making changes (or deciding there is nothing to fix), write your summary in this exact format — it appears in the terminal and is used as the commit message:
+  `<etch_summary>fixed 3 issues — null guard in auth.py, bounds check in parser.py, timeout in agent.py</etch_summary>`
+  `<etch_summary>nothing to fix — all reported issues were already handled</etch_summary>`

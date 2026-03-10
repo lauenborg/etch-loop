@@ -179,9 +179,9 @@ For each issue, include the file path, line number (if known), and a one-line de
 5. List each confirmed issue on its own line, e.g.:
    - src/auth.py:42 — crashes with empty token string (no guard)
    - src/api.js:108 — unhandled promise rejection will silently fail
-6. Before the signal token, write this line — it appears directly in the terminal:
-   `ETCH_SUMMARY: <one sentence, max 80 chars, e.g. "3 bugs found — null deref in auth.py:42, off-by-one in parser.py:88">`
-   `ETCH_SUMMARY: no confirmed bugs found`
+6. Before the signal token, write your summary in this exact format — it appears directly in the terminal:
+   `<etch_summary>3 bugs found — null deref in auth.py:42, off-by-one in parser.py:88</etch_summary>`
+   `<etch_summary>no confirmed bugs found</etch_summary>`
 7. End with EXACTLY one of these on its own line:
    `ETCH_ISSUES_FOUND`
    `ETCH_ALL_CLEAR`
@@ -222,12 +222,9 @@ Scan the codebase for:
 
 ## Terminal output (required)
 
-After making changes (or deciding there is nothing to fix), write this line — it appears directly in the terminal and is used as the commit message:
-  `ETCH_SUMMARY: <one sentence, max 80 chars>`
-
-Examples:
-  `ETCH_SUMMARY: fixed 3 issues — null guard in auth.py, bounds check in parser.py, timeout in agent.py`
-  `ETCH_SUMMARY: nothing to fix — all reported issues were already handled`
+After making changes (or deciding there is nothing to fix), write your summary in this exact format — it appears in the terminal and is used as the commit message:
+  `<etch_summary>fixed 3 issues — null guard in auth.py, bounds check in parser.py, timeout in agent.py</etch_summary>`
+  `<etch_summary>nothing to fix — all reported issues were already handled</etch_summary>`
 """
 
 
@@ -256,9 +253,9 @@ Be adversarial — think like someone actively trying to make this code fail.
 
 1. DO NOT edit any files — read only
 2. Report your findings clearly, one per line
-3. Before the signal token, write this line — it appears directly in the terminal:
-   `ETCH_SUMMARY: <one sentence, max 80 chars, e.g. "2 issues — unguarded empty list in sorter.py:14, exception swallowed in loader.py:67">`
-   `ETCH_SUMMARY: no issues found — code looks solid`
+3. Before the signal token, write your summary in this exact format — it appears directly in the terminal:
+   `<etch_summary>2 issues — unguarded empty list in sorter.py:14, exception swallowed in loader.py:67</etch_summary>`
+   `<etch_summary>no issues found — code looks solid</etch_summary>`
 4. End with EXACTLY one of these on its own line:
    `ETCH_ISSUES_FOUND`
    `ETCH_ALL_CLEAR`
@@ -302,11 +299,9 @@ You are a test engineer. The fixer has just made changes. Your job is to write t
 1. You MAY edit test files — that is your job
 2. Do NOT touch production code — only tests
 3. If tests fail because of flawed test logic, fix the test and re-run before reporting
-4. When done, write this line — it appears directly in the terminal:
-   `ETCH_SUMMARY: <one sentence, max 80 chars>`
-   Examples:
-   `ETCH_SUMMARY: wrote 4 tests, all 51 passed`
-   `ETCH_SUMMARY: 2 tests failed — TypeError in test_auth.py:38, production bug in token.py:12`
+4. When done, write your summary in this exact format — it appears directly in the terminal:
+   `<etch_summary>wrote 4 tests, all 51 passed</etch_summary>`
+   `<etch_summary>2 tests failed — TypeError in test_auth.py:38, production bug in token.py:12</etch_summary>`
 5. End with EXACTLY one of these on its own line:
    `ETCH_ALL_CLEAR` — if all tests pass
    `ETCH_ISSUES_FOUND` — if tests reveal a bug in production code
