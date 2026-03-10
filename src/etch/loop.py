@@ -64,17 +64,27 @@ def run(
         "elapsed": 0.0,
     }
     last_breaker_signal: str | None = None  # None = breaker hasn't run yet
+    last_breaker_output: str | None = None
 
     with display.EtchDisplay(target=str(prompt_path.parent)) as disp:
         for iteration in range(1, max_iterations + 1):
             stats["iterations"] = iteration
             disp.start_iteration(iteration)
 
+            # ── Build fixer prompt for this iteration ─────────────────────────
+            fixer_prompt = prompt_text
+            if last_breaker_output:
+                fixer_prompt += (
+                    f"\n\n## Breaker findings from previous iteration\n\n"
+                    f"{last_breaker_output.strip()}\n\n"
+                    f"Address these specific findings first, then scan for anything new.\n"
+                )
+
             # ── Fixer phase ───────────────────────────────────────────────────
             disp.start_phase("fixer")
             fixer_start = time.monotonic()
             try:
-                _fixer_output = agent.run(prompt_text, verbose=verbose)
+                _fixer_output = agent.run(fixer_prompt, verbose=verbose)
             except AgentError as exc:
                 disp.finish_phase(
                     "fixer",
@@ -166,6 +176,7 @@ def run(
             breaker_duration = time.monotonic() - breaker_start
             signal = signals.parse(breaker_output)
             last_breaker_signal = signal
+            last_breaker_output = breaker_output if signal == "issues" else None
             finding = signals.extract_finding(breaker_output)
 
             if signal == "clear":
