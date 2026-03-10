@@ -315,6 +315,109 @@ class EtchDisplay:
 _console = Console(style=f"on {BG}")
 
 
+# ── InitDisplay ──────────────────────────────────────────────────────────────
+
+
+class InitDisplay:
+    """Live panel for etch init — same box aesthetic as EtchDisplay."""
+
+    def __init__(self) -> None:
+        self._console = Console(style=f"on {BG}")
+        self._lines: list[tuple[str, str, str]] = []  # (symbol, color, text)
+        self._scanning = False
+        self._tick = 0
+        self._lock = threading.Lock()
+        self._live: Live | None = None
+        self._ticker_stop = threading.Event()
+        self._ticker_thread: threading.Thread | None = None
+
+    def __enter__(self) -> "InitDisplay":
+        self._live = Live(
+            self._render(),
+            console=self._console,
+            refresh_per_second=15,
+            transient=False,
+        )
+        self._live.__enter__()
+        self._start_ticker()
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        self._stop_ticker()
+        if self._live is not None:
+            self._live.__exit__(*args)
+
+    def start_scan(self) -> None:
+        with self._lock:
+            self._scanning = True
+        self._refresh()
+
+    def finish_scan(self, success: bool = True) -> None:
+        with self._lock:
+            self._scanning = False
+            sym = SYM_OK if success else SYM_FAIL
+            color = GREEN if success else RED
+            self._lines.append((sym, color, "analyzed codebase"))
+        self._refresh()
+
+    def add_line(self, symbol: str, color: str, text: str) -> None:
+        with self._lock:
+            self._lines.append((symbol, color, text))
+        self._refresh()
+
+    def _render(self) -> RenderableType:
+        with self._lock:
+            lines = list(self._lines)
+            scanning = self._scanning
+            tick = self._tick
+
+        table = Table.grid(padding=(0, 1))
+        table.add_column(width=2)
+        table.add_column()
+
+        for sym, color, text in lines:
+            table.add_row(
+                Text(sym, style=Style(color=color)),
+                Text(text, style=Style(color=FG)),
+            )
+
+        if scanning:
+            row_content: RenderableType = Columns([
+                Text(f"{SYM_RUN}  analyzing  ", style=Style(color=AMBER)),
+                ScanBar(tick),
+            ])
+            table.add_row(Text(""), row_content)
+
+        return Panel(
+            table,
+            title=f"[{AMBER}]etch init v{__version__}[/{AMBER}]",
+            border_style=Style(color=BORDER),
+            style=Style(bgcolor=BG),
+        )
+
+    def _refresh(self) -> None:
+        if self._live is not None:
+            self._live.update(self._render())
+
+    def _start_ticker(self) -> None:
+        self._ticker_stop.clear()
+        self._ticker_thread = threading.Thread(target=self._ticker_loop, daemon=True)
+        self._ticker_thread.start()
+
+    def _stop_ticker(self) -> None:
+        self._ticker_stop.set()
+        if self._ticker_thread is not None:
+            self._ticker_thread.join(timeout=1.0)
+            self._ticker_thread = None
+
+    def _ticker_loop(self) -> None:
+        while not self._ticker_stop.is_set():
+            with self._lock:
+                self._tick += 1
+            self._refresh()
+            time.sleep(TICK_MS / 1000.0)
+
+
 def run_with_scan(label: str, fn: Callable[[], _T]) -> _T:
     """Run fn() while showing a scan animation. Returns fn()'s result."""
     result: list[_T] = []

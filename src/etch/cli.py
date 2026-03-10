@@ -19,31 +19,31 @@ app = typer.Typer(
 
 @app.command()
 def init() -> None:
-    """Analyze the codebase with Claude and write tailored ETCH.md and BREAK.md."""
+    """Analyze the codebase with Claude and write tailored SCAN.md, ETCH.md, BREAK.md."""
     root = Path.cwd()
     info = analyze.analyze(root)
     init_prompt = analyze.build_init_prompt(info)
 
     agent_scope: str | None = None
-    try:
-        agent_scope = display.run_with_scan(
-            "claude analyzing codebase",
-            lambda: agent.run(init_prompt),
-        )
-    except AgentError as exc:
-        display.print_error(f"Agent analysis failed: {exc}\nFalling back to static analysis.")
+    with display.InitDisplay() as disp:
+        disp.start_scan()
+        try:
+            agent_scope = agent.run(init_prompt)
+            disp.finish_scan(success=True)
+        except AgentError as exc:
+            disp.finish_scan(success=False)
+            disp.add_line(display.SYM_NEUTRAL, display.DIM, f"falling back to static analysis ({exc})")
 
-    _write_prompt(root / "SCAN.md", analyze.build_scan_md(info, agent_scope), "SCAN.md")
-    _write_prompt(root / "ETCH.md", analyze.build_etch_md(info, agent_scope), "ETCH.md")
-    _write_prompt(root / "BREAK.md", analyze.build_break_md(info, agent_scope), "BREAK.md")
-
-
-def _write_prompt(dest: Path, content: str, label: str) -> None:
-    if dest.exists():
-        display.print_init_skip(label)
-        return
-    dest.write_text(content, encoding="utf-8")
-    display.print_init_ok(label)
+        for dest, content, label in [
+            (root / "SCAN.md",  analyze.build_scan_md(info, agent_scope),  "SCAN.md"),
+            (root / "ETCH.md",  analyze.build_etch_md(info, agent_scope),  "ETCH.md"),
+            (root / "BREAK.md", analyze.build_break_md(info, agent_scope), "BREAK.md"),
+        ]:
+            if dest.exists():
+                disp.add_line(display.SYM_NEUTRAL, display.DIM, f"{label} already exists, skipping")
+            else:
+                dest.write_text(content, encoding="utf-8")
+                disp.add_line(display.SYM_OK, display.GREEN, label)
 
 
 @app.command()
