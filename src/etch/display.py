@@ -135,8 +135,8 @@ class EtchDisplay:
             self._entries.append(
                 _LogEntry(
                     symbol=SYM_NEUTRAL,
-                    phase=f"iteration {n}",
-                    status="",
+                    phase="iteration",
+                    status=str(n),
                     detail="",
                     color=DIM,
                 )
