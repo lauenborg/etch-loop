@@ -84,7 +84,7 @@ def run(
             pass
         try:
             process.stdin.close()
-        except OSError:
+        except (OSError, ValueError):
             pass
         raise AgentError(f"Failed to write prompt to claude stdin: {stdin_exc[0]}") from stdin_exc[0]
 
