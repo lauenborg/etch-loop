@@ -72,6 +72,12 @@ def run(
         help="Skip git commits after fixer runs.",
         is_flag=True,
     ),
+    no_git: bool = typer.Option(
+        False,
+        "--no-git",
+        help="Disable all git operations (diff checks and commits).",
+        is_flag=True,
+    ),
     dry_run: bool = typer.Option(
         False,
         "--dry-run",
@@ -98,6 +104,7 @@ def run(
             prompt_path=prompt,
             max_iterations=max_iterations,
             no_commit=no_commit,
+            no_git=no_git,
             dry_run=dry_run,
             verbose=verbose,
             focus=focus,

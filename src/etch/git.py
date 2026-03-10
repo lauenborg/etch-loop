@@ -54,7 +54,7 @@ def has_changes() -> bool:
     return bool(status.stdout.strip())
 
 
-def commit(message: str) -> None:
+def commit(message: str, paths: list[str] | None = None) -> None:
     """Stage all changes and create a commit.
 
     Args:
@@ -66,10 +66,11 @@ def commit(message: str) -> None:
     if not message or not message.strip():
         raise GitError("Commit message must not be empty.")
 
-    # Stage all changes
+    # Stage all changes (or specific paths)
+    add_cmd = ["git", "add"] + (paths if paths else ["-A"])
     try:
         add_result = subprocess.run(
-            ["git", "add", "-A"],
+            add_cmd,
             capture_output=True,
             text=True,
         )

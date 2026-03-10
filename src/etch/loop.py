@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from etch import agent, display, git, prompt, signals
+from etch import agent, display, git, prompt, report, signals
 from etch.agent import AgentError
 from etch.git import GitError
 from etch.prompt import PromptError, load_scan
@@ -15,22 +15,15 @@ def run(
     prompt_path: str | Path,
     max_iterations: int = 20,
     no_commit: bool = False,
+    no_git: bool = False,
     dry_run: bool = False,
     verbose: bool = False,
     focus: str | None = None,
 ) -> None:
-    """Run the fix-break loop.
-
-    Args:
-        prompt_path:    Path to ETCH.md (fixer prompt).
-        max_iterations: Maximum number of fix-break cycles to run.
-        no_commit:      If True, skip git commits after fixer runs.
-        dry_run:        If True, print the prompt and exit without running.
-        verbose:        If True, stream agent output to the terminal.
-    """
+    """Run the scan-fix-break loop."""
     prompt_path = Path(prompt_path)
 
-    # ── Load fixer prompt ──────────────────────────────────────────────────────
+    # ── Load prompts ──────────────────────────────────────────────────────────
     try:
         prompt_text = prompt.load(prompt_path)
     except PromptError as exc:
@@ -40,12 +33,10 @@ def run(
     if focus:
         prompt_text += f"\n\n## User focus\n\nConcentrate specifically on: {focus}\n"
 
-    # ── Dry run ───────────────────────────────────────────────────────────────
     if dry_run:
         display.print_dry_run(prompt_text)
         return
 
-    # ── Load scanner + breaker prompts early to fail fast ────────────────────
     try:
         scan_text = prompt.load_scan(prompt_path)
     except PromptError as exc:
@@ -70,13 +61,15 @@ def run(
         "reason": "done",
         "elapsed": 0.0,
     }
-    last_breaker_signal: str | None = None  # None = breaker hasn't run yet
+    last_breaker_signal: str | None = None
     last_breaker_output: str | None = None
+    iteration_log: list[dict] = []
 
     with display.EtchDisplay(target=str(prompt_path.parent)) as disp:
         for iteration in range(1, max_iterations + 1):
             stats["iterations"] = iteration
             disp.start_iteration(iteration)
+            iter_entry: dict = {"n": iteration}
 
             # ── Scanner phase ─────────────────────────────────────────────────
             disp.start_phase("scanner")
@@ -84,14 +77,10 @@ def run(
             try:
                 scanner_output = agent.run(scan_text, verbose=verbose)
             except AgentError as exc:
-                disp.finish_phase(
-                    "scanner",
-                    status="error",
-                    detail=str(exc),
-                    duration=time.monotonic() - scanner_start,
-                    success=False,
-                )
+                disp.finish_phase("scanner", status="error", detail=str(exc),
+                                  duration=time.monotonic() - scanner_start, success=False)
                 stats["reason"] = "agent_error"
+                iteration_log.append(iter_entry)
                 break
 
             scanner_duration = time.monotonic() - scanner_start
@@ -99,29 +88,23 @@ def run(
             scanner_finding = signals.extract_finding(scanner_output)
 
             if scanner_signal == "clear":
-                disp.finish_phase(
-                    "scanner",
-                    status="all clear",
-                    detail=scanner_finding or "nothing to fix",
-                    duration=scanner_duration,
-                    success=True,
-                )
+                disp.finish_phase("scanner", status="all clear",
+                                  detail=scanner_finding or "nothing to fix",
+                                  duration=scanner_duration, success=True)
+                iter_entry["scanner"] = {"status": "all clear", "detail": scanner_finding}
                 stats["reason"] = "no_changes"
+                iteration_log.append(iter_entry)
                 break
 
-            disp.finish_phase(
-                "scanner",
-                status="issues found",
-                detail=scanner_finding or "issues found",
-                duration=scanner_duration,
-                success=False,
-            )
+            disp.finish_phase("scanner", status="issues found",
+                              detail=scanner_finding or "issues found",
+                              duration=scanner_duration, success=False)
+            iter_entry["scanner"] = {"status": "issues found", "detail": scanner_finding}
 
-            # ── Build fixer prompt with scanner + breaker findings ─────────────
+            # ── Build fixer prompt ────────────────────────────────────────────
             fixer_prompt = prompt_text
             fixer_prompt += (
-                f"\n\n## Scanner findings\n\n"
-                f"{scanner_output.strip()}\n\n"
+                f"\n\n## Scanner findings\n\n{scanner_output.strip()}\n\n"
                 f"Fix these specific issues.\n"
             )
             if last_breaker_output:
@@ -137,76 +120,56 @@ def run(
             try:
                 _fixer_output = agent.run(fixer_prompt, verbose=verbose)
             except AgentError as exc:
-                disp.finish_phase(
-                    "fixer",
-                    status="error",
-                    detail=str(exc),
-                    duration=time.monotonic() - fixer_start,
-                    success=False,
-                )
+                disp.finish_phase("fixer", status="error", detail=str(exc),
+                                  duration=time.monotonic() - fixer_start, success=False)
                 stats["reason"] = "agent_error"
+                iteration_log.append(iter_entry)
                 break
 
             fixer_duration = time.monotonic() - fixer_start
 
-            # ── Check for changes ─────────────────────────────────────────────
-            try:
-                changed = git.has_changes()
-            except GitError as exc:
-                disp.finish_phase(
-                    "fixer",
-                    status="error",
-                    detail=str(exc),
-                    duration=fixer_duration,
-                    success=False,
-                )
-                stats["reason"] = "git_error"
-                break
-
-            if not changed:
-                disp.finish_phase(
-                    "fixer",
-                    status="no changes",
-                    detail="nothing to fix",
-                    duration=fixer_duration,
-                    success=True,
-                )
-                # If the breaker has never run (first iteration with no diff),
-                # stop immediately — nothing was ever changed, nothing to challenge.
-                # If the breaker previously found issues, run it once more to
-                # confirm whether those issues are still present or now resolved.
-                if last_breaker_signal != "issues":
-                    stats["reason"] = "no_changes"
+            # ── Check for changes (skipped when no_git) ───────────────────────
+            if not no_git:
+                try:
+                    changed = git.has_changes()
+                except GitError as exc:
+                    disp.finish_phase("fixer", status="error", detail=str(exc),
+                                      duration=fixer_duration, success=False)
+                    stats["reason"] = "git_error"
+                    iteration_log.append(iter_entry)
                     break
-                # Fall through to run the breaker one final time
+
+                if not changed:
+                    disp.finish_phase("fixer", status="no changes", detail="nothing to fix",
+                                      duration=fixer_duration, success=True)
+                    iter_entry["fixer"] = {"status": "no changes", "detail": "nothing to fix"}
+                    if last_breaker_signal != "issues":
+                        stats["reason"] = "no_changes"
+                        iteration_log.append(iter_entry)
+                        break
+                    iteration_log.append(iter_entry)
+                    # Fall through to breaker
 
             # ── Commit ────────────────────────────────────────────────────────
             commit_msg = signals.extract_commit_message(
                 _fixer_output, fallback=f"fix(edge): iteration {iteration}"
             )
-            if not no_commit:
+            if not no_git and not no_commit:
                 try:
                     git.commit(commit_msg)
                 except GitError as exc:
-                    disp.finish_phase(
-                        "fixer",
-                        status="commit error",
-                        detail=str(exc),
-                        duration=fixer_duration,
-                        success=False,
-                    )
+                    disp.finish_phase("fixer", status="commit error", detail=str(exc),
+                                      duration=fixer_duration, success=False)
                     stats["reason"] = "git_error"
+                    iteration_log.append(iter_entry)
                     break
 
             disp.record_fix()
             stats["fixes"] += 1
-            disp.finish_phase(
-                "fixer",
-                status="committed" if not no_commit else "changed",
-                detail=commit_msg,
-                duration=fixer_duration,
-                success=True,
-            )
+            status_label = "changed" if (no_git or no_commit) else "committed"
+            disp.finish_phase("fixer", status=status_label, detail=commit_msg,
+                              duration=fixer_duration, success=True)
+            iter_entry["fixer"] = {"status": status_label, "detail": commit_msg}
 
             # ── Breaker phase ─────────────────────────────────────────────────
             disp.start_phase("breaker")
@@ -214,14 +177,10 @@ def run(
             try:
                 breaker_output = agent.run(break_text, verbose=verbose)
             except AgentError as exc:
-                disp.finish_phase(
-                    "breaker",
-                    status="error",
-                    detail=str(exc),
-                    duration=time.monotonic() - breaker_start,
-                    success=False,
-                )
+                disp.finish_phase("breaker", status="error", detail=str(exc),
+                                  duration=time.monotonic() - breaker_start, success=False)
                 stats["reason"] = "agent_error"
+                iteration_log.append(iter_entry)
                 break
 
             breaker_duration = time.monotonic() - breaker_start
@@ -231,31 +190,37 @@ def run(
             finding = signals.extract_finding(breaker_output)
 
             if signal == "clear":
-                disp.finish_phase(
-                    "breaker",
-                    status="all clear",
-                    detail=finding or "no issues found",
-                    duration=breaker_duration,
-                    success=True,
-                )
+                disp.finish_phase("breaker", status="all clear",
+                                  detail=finding or "no issues found",
+                                  duration=breaker_duration, success=True)
+                iter_entry["breaker"] = {"status": "all clear", "detail": finding}
                 stats["reason"] = "clear"
+                iteration_log.append(iter_entry)
                 break
             else:
                 disp.record_issue()
                 stats["issues"] += 1
-                disp.finish_phase(
-                    "breaker",
-                    status="issues",
-                    detail=finding or "issues found",
-                    duration=breaker_duration,
-                    success=False,
-                )
+                disp.finish_phase("breaker", status="issues",
+                                  detail=finding or "issues found",
+                                  duration=breaker_duration, success=False)
+                iter_entry["breaker"] = {"status": "issues", "detail": finding}
                 stats["reason"] = "issues"
-                # Continue to next iteration
+                iteration_log.append(iter_entry)
 
         else:
-            # Loop exhausted without break
             stats["reason"] = "max_iterations"
 
         stats["elapsed"] = time.monotonic() - start_time
         disp.print_summary(stats)
+
+    # ── Write report ──────────────────────────────────────────────────────────
+    try:
+        report_path = report.write(stats, iteration_log, output_dir=prompt_path.parent)
+        if not no_git and not no_commit and stats["fixes"] > 0:
+            try:
+                git.commit(f"etch: add run report {report_path.name}", paths=[str(report_path)])
+            except GitError:
+                pass  # report write is best-effort
+        display.print_report_saved(report_path)
+    except Exception:
+        pass  # report is best-effort, never fail the run over it

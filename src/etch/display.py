@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, TypeVar
 
 from rich.columns import Columns
@@ -495,6 +496,10 @@ def print_init_skip(filename: str) -> None:
     _console.print(
         f"[{AMBER}]{SYM_NEUTRAL}[/{AMBER}]  [{DIM}]{filename} already exists, skipping[/{DIM}]"
     )
+
+
+def print_report_saved(path: Path) -> None:
+    _console.print(f"[{DIM}]{SYM_NEUTRAL}  report saved → {path}[/{DIM}]")
 
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
