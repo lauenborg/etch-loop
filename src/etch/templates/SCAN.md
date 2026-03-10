@@ -17,7 +17,7 @@ For each issue, include the file path, line number (if known), and a one-line de
 ## Rules
 
 1. DO NOT edit any files — read only
-   **IGNORE the `etch-loop/` directory entirely** — it contains etch tool metadata, not production code
+   **DO NOT read any file inside `etch-loop/`** — those are etch tool config files, not your codebase
 2. Only report issues you are confident are genuine bugs — not observations, not style, not "could be cleaner"
 3. If something is already handled correctly, do NOT report it — even if the handling is unusual
 4. If you are unsure whether something is a bug, leave it out

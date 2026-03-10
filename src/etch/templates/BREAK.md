@@ -18,7 +18,7 @@ Be adversarial — think like someone actively trying to make this code fail.
 ## Rules
 
 1. DO NOT edit any files — read only
-   **IGNORE the `etch-loop/` directory entirely** — it contains etch tool metadata, not production code
+   **DO NOT read any file inside `etch-loop/`** — those are etch tool config files, not your codebase
 2. Report your findings clearly, one per line
 3. Before the signal token, write your summary in this exact format — it appears directly in the terminal:
    `<etch_summary>2 issues — unguarded empty list in sorter.py:14, exception swallowed in loader.py:67</etch_summary>`

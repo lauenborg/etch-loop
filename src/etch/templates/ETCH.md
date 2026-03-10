@@ -14,7 +14,7 @@ Scan the codebase for:
 
 ## Rules
 
-0. **IGNORE the `etch-loop/` directory entirely** — it contains etch tool metadata, not production code
+0. **DO NOT read or edit any file inside `etch-loop/`** — those are etch tool config files. Editing them corrupts the tool and is never a valid fix.
 1. Fix only what you find — do not refactor, rename, or reorganize
 2. Do not add comments explaining what you fixed
 3. If you find nothing, make no changes
