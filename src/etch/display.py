@@ -287,8 +287,9 @@ class EtchDisplay:
         )
 
     def _refresh(self) -> None:
-        if self._live is not None:
-            self._live.update(self._render())
+        with self._lock:
+            if self._live is not None:
+                self._live.update(self._render())
 
     # ── Ticker thread ─────────────────────────────────────────────────────────
 
@@ -404,8 +405,9 @@ class InitDisplay:
         )
 
     def _refresh(self) -> None:
-        if self._live is not None:
-            self._live.update(self._render())
+        with self._lock:
+            if self._live is not None:
+                self._live.update(self._render())
 
     def _start_ticker(self) -> None:
         self._ticker_stop.clear()

@@ -333,6 +333,8 @@ def _detect_run_commands(root: Path) -> list[str]:
         try:
             pkg = json.loads((root / "package.json").read_text(encoding="utf-8"))
             scripts = pkg.get("scripts") or {}
+            if not isinstance(scripts, dict):
+                scripts = {}
             if "build" in scripts:
                 commands.append("npm run build")
             if "test" in scripts:

@@ -172,7 +172,7 @@ def run(
                     disp.finish_phase("fixer", status="no changes", detail="nothing to fix",
                                       duration=fixer_duration, success=True)
                     iter_entry["fixer"] = {"status": "no changes", "detail": "nothing to fix"}
-                    stats["reason"] = "no_changes"
+                    stats["reason"] = "stalled" if last_breaker_signal == "issues" else "no_changes"
                     iteration_log.append(iter_entry)
                     break
 
@@ -195,7 +195,7 @@ def run(
                         iteration_log.append(iter_entry)
                         break
 
-                if changed or no_git:
+                if changed or (no_git and fixer_summary and not fixer_summary.lower().startswith("nothing")):
                     disp.record_fix()
                     stats["fixes"] += 1
                 status_label = "no-git" if no_git else ("changed" if no_commit else "committed")
