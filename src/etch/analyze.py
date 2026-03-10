@@ -107,12 +107,14 @@ def analyze(root: Path | None = None) -> dict:
         "framework": framework,
         "total_files": total,
         "is_git": (root / ".git").exists(),
+        "root": root,
     }
 
 
 def build_init_prompt(info: dict) -> str:
     """Build the Claude prompt used during etch init to analyze the codebase."""
-    file_tree = "\n".join(f"  {f}" for f in _list_files(Path.cwd())[:60])
+    root = info.get("root", Path.cwd())
+    file_tree = "\n".join(f"  {f}" for f in _list_files(root)[:60])
     if not file_tree:
         file_tree = "  (no tracked files)"
 
@@ -288,12 +290,15 @@ def _list_files(root: Path) -> list[str]:
 
     # Fallback: walk filesystem
     files = []
-    for p in root.rglob("*"):
-        if p.is_file() and not any(part in _SKIP_DIRS for part in p.parts):
-            try:
-                files.append(str(p.relative_to(root)))
-            except ValueError:
-                pass
+    try:
+        for p in root.rglob("*"):
+            if p.is_file() and not any(part in _SKIP_DIRS for part in p.parts):
+                try:
+                    files.append(str(p.relative_to(root)))
+                except ValueError:
+                    pass
+    except OSError:
+        pass
     return files
 
 

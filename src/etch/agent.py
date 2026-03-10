@@ -51,18 +51,34 @@ def run(
     except OSError as exc:
         raise AgentError(f"Failed to launch claude: {exc}") from exc
 
-    # Write prompt to stdin and close it
-    try:
-        process.stdin.write(prompt)
-        process.stdin.close()
-    except BrokenPipeError as exc:
-        raise AgentError(f"Failed to write prompt to claude stdin: {exc}") from exc
+    # Write prompt to stdin and close it — run in thread to avoid blocking on full pipe buffer
+    stdin_exc: list[Exception] = []
+
+    def write_stdin() -> None:
+        try:
+            process.stdin.write(prompt)
+            process.stdin.close()
+        except BrokenPipeError as exc:
+            stdin_exc.append(exc)
+
+    stdin_writer = threading.Thread(target=write_stdin, daemon=True)
+    stdin_writer.start()
+    stdin_writer.join(timeout=30)
+    if stdin_writer.is_alive():
+        process.kill()
+        raise AgentError("Timed out writing prompt to claude stdin")
+    if stdin_exc:
+        process.kill()
+        raise AgentError(f"Failed to write prompt to claude stdin: {stdin_exc[0]}") from stdin_exc[0]
+
+    if process.stdout is None:
+        process.kill()
+        raise AgentError("claude subprocess has no stdout")
 
     output_lines: list[str] = []
     lock = threading.Lock()
 
     def read_stdout() -> None:
-        assert process.stdout is not None
         for line in process.stdout:
             with lock:
                 output_lines.append(line)
@@ -73,9 +89,16 @@ def run(
 
     reader = threading.Thread(target=read_stdout, daemon=True)
     reader.start()
-    reader.join()
+    reader.join(timeout=300)
+    if reader.is_alive():
+        process.kill()
+        raise AgentError("claude subprocess timed out (output reader still running)")
 
-    process.wait()
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        raise AgentError("claude subprocess timed out waiting for exit")
 
     # Capture stderr for error reporting
     stderr_output = ""

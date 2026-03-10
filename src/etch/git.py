@@ -48,8 +48,8 @@ def has_changes() -> bool:
         raise GitError(f"Failed to run git status: {exc}") from exc
 
     if status.returncode != 0:
-        stderr = result.stderr.decode(errors="replace").strip()
-        raise GitError(f"git diff failed (exit {result.returncode}): {stderr}")
+        stderr = status.stderr.strip()
+        raise GitError(f"git status failed (exit {status.returncode}): {stderr}")
 
     return bool(status.stdout.strip())
 
