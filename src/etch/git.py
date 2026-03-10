@@ -31,13 +31,15 @@ def has_changes() -> bool:
     except OSError as exc:
         raise GitError(f"Failed to run git: {exc}") from exc
 
-    if result.returncode == 0:
-        return False
     if result.returncode == 1:
         return True
 
-    # Non-zero, non-one exit code — could mean no commits yet, check with status
-    # Fallback: check via git status --porcelain
+    # Exit code 0 means no tracked changes, but untracked files won't appear in
+    # `git diff HEAD`.  Exit code 128 means no commits yet.  In both cases fall
+    # through to `git status --porcelain` which covers all working-tree changes.
+    if result.returncode not in (0, 128):
+        raise GitError(f"git diff exited with unexpected code {result.returncode}")
+
     try:
         status = subprocess.run(
             ["git", "status", "--porcelain"],
@@ -67,7 +69,7 @@ def commit(message: str, paths: list[str] | None = None) -> None:
         raise GitError("Commit message must not be empty.")
 
     # Stage all changes (or specific paths)
-    add_cmd = ["git", "add"] + (paths if paths else ["-A"])
+    add_cmd = ["git", "add"] + (paths if paths else ["-u"])
     try:
         add_result = subprocess.run(
             add_cmd,

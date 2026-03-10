@@ -20,9 +20,13 @@ def parse(output: str) -> str:
     Returns:
         "clear"  — ETCH_ALL_CLEAR found on its own line first
         "issues" — ETCH_ISSUES_FOUND found on its own line first, or no token found
+        "empty"  — output is empty or whitespace-only (agent produced no content)
     """
     if not isinstance(output, str):
         return "issues"
+
+    if not output.strip():
+        return "empty"
 
     for line in output.splitlines():
         stripped = line.strip().strip("`").strip()

@@ -98,8 +98,9 @@ def load_run(path: str | Path | None = None) -> str | None:
     for candidate in candidates:
         if candidate.exists() and candidate.is_file():
             content = candidate.read_text(encoding="utf-8")
-            if content.strip():
-                return content
+            if not content.strip():
+                return None
+            return content
 
     return None  # Optional phase — no error if absent
 
