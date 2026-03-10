@@ -105,8 +105,8 @@ def load_run(path: str | Path | None = None) -> str | None:
         if candidate.exists() and candidate.is_file():
             try:
                 content = candidate.read_text(encoding="utf-8")
-            except OSError:
-                continue
+            except OSError as exc:
+                raise PromptError(f"RUN.md is unreadable: {candidate}") from exc
             if not content.strip():
                 raise PromptError(f"RUN.md is empty: {candidate}")
             return content

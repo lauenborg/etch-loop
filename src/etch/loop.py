@@ -202,21 +202,17 @@ def run(
 
             # ── Commit ────────────────────────────────────────────────────────
             if no_git or changed:
-                _raw_summary = (
+                fixer_summary = (
                     signals.extract_summary(_fixer_output)
                     or signals.extract_commit_message(_fixer_output, fallback="")
                 )
-                if no_git and (not _raw_summary or _raw_summary.lower().startswith("nothing to fix")):
+                if no_git and (not fixer_summary or fixer_summary.lower().startswith("nothing")):
                     disp.finish_phase("fixer", status="no changes", detail="nothing to fix",
                                       duration=fixer_duration, success=True)
                     iter_entry["fixer"] = {"status": "no changes", "detail": "nothing to fix"}
                     stats["reason"] = "stalled" if last_breaker_signal == "issues" else "no_changes"
                     iteration_log.append(iter_entry)
                     break
-                fixer_summary = (
-                    signals.extract_summary(_fixer_output)
-                    or signals.extract_commit_message(_fixer_output, fallback="")
-                )
                 commit_msg = signals.extract_commit_message(
                     _fixer_output, fallback=f"fix(edge): iteration {iteration}"
                 )
