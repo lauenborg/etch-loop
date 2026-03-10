@@ -387,7 +387,7 @@ def _list_files(root: Path) -> list[str]:
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip().splitlines()
-    except (subprocess.TimeoutExpired, FileNotFoundError):
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
         pass
 
     # Fallback: walk filesystem

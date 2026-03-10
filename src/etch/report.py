@@ -25,7 +25,7 @@ def write(
     output_dir = output_dir or Path.cwd()
     reports_dir = output_dir / "etch-reports"
     reports_dir.mkdir(exist_ok=True)
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     path = reports_dir / f"etch-report-{timestamp}.md"
 
     lines: list[str] = []
