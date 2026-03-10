@@ -99,7 +99,7 @@ def load_run(path: str | Path | None = None) -> str | None:
         if candidate.exists() and candidate.is_file():
             content = candidate.read_text(encoding="utf-8")
             if not content.strip():
-                return None
+                raise PromptError(f"RUN.md is empty: {candidate}")
             return content
 
     return None  # Optional phase — no error if absent

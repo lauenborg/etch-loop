@@ -65,6 +65,8 @@ def extract_commit_message(output: str, fallback: str) -> str:
         stripped = line.strip().lstrip("-*•").strip().strip("`").strip()
         if not stripped or len(stripped) < 8:
             continue
+        if stripped in (_TOKEN_CLEAR, _TOKEN_ISSUES):
+            continue
         if stripped.startswith("#"):
             continue
         if all(c in _PUNCTUATION_ONLY for c in stripped):

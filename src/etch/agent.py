@@ -101,14 +101,14 @@ def run(
         process.wait()
         raise AgentError("claude subprocess timed out (output reader still running)")
 
-    stderr_reader.join(timeout=10)
-
     try:
         process.wait(timeout=10)
     except subprocess.TimeoutExpired:
         process.kill()
         process.wait()
         raise AgentError("claude subprocess timed out waiting for exit")
+
+    stderr_reader.join(timeout=10)
 
     stderr_output = "".join(stderr_lines).strip()
 

@@ -34,7 +34,7 @@ wheels = [
 
 [[package]]
 name = "etch-loop"
-version = "0.4.9"
+version = "0.5.2"
 source = { editable = "." }
 dependencies = [
     { name = "rich" },
