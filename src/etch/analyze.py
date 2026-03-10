@@ -50,6 +50,7 @@ _FRAMEWORK_HINTS: dict[str, str] = {
 _SKIP_DIRS = {
     ".git", "node_modules", "__pycache__", ".venv", "venv", "env",
     "dist", "build", ".next", "target", "vendor", ".cache",
+    "etch-loop",  # etch metadata — never part of the codebase being analyzed
 }
 
 
