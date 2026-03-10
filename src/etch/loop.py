@@ -206,24 +206,6 @@ def run(
                     signals.extract_summary(_fixer_output)
                     or signals.extract_commit_message(_fixer_output, fallback="")
                 )
-                _NO_FIX_PREFIXES = (
-                    "nothing", "no changes", "no fix", "no issue", "no edit",
-                    "no modif", "already", "skipped", "i skipped",
-                    "all issues resolved", "looks good", "the code is correct",
-                    "no problems found", "everything is fine", "no bugs",
-                    "no errors", "code is fine", "code looks",
-                )
-                _fs_lower = fixer_summary.lower() if fixer_summary else ""
-                _fixer_no_change = bool(fixer_summary) and any(
-                    _fs_lower.startswith(p) for p in _NO_FIX_PREFIXES
-                )
-                if no_git and _fixer_no_change:
-                    disp.finish_phase("fixer", status="no changes", detail="nothing to fix",
-                                      duration=fixer_duration, success=True)
-                    iter_entry["fixer"] = {"status": "no changes", "detail": "nothing to fix"}
-                    stats["reason"] = "stalled" if last_breaker_signal == "issues" else "no_changes"
-                    iteration_log.append(iter_entry)
-                    break
                 commit_msg = signals.extract_commit_message(
                     _fixer_output, fallback=f"fix(edge): iteration {iteration}"
                 )
@@ -237,7 +219,7 @@ def run(
                         iteration_log.append(iter_entry)
                         break
 
-                if changed or (no_git and not _fixer_no_change):
+                if changed or no_git:
                     disp.record_fix()
                     stats["fixes"] += 1
                 status_label = "no-git" if no_git else ("changed" if no_commit else "committed")
