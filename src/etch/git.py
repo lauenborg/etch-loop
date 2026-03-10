@@ -69,7 +69,7 @@ def commit(message: str, paths: list[str] | None = None) -> None:
         raise GitError("Commit message must not be empty.")
 
     # Stage all changes (or specific paths)
-    add_cmd = ["git", "add"] + (paths if paths else ["-u"])
+    add_cmd = ["git", "add"] + (paths if paths is not None else ["--all"])
     try:
         add_result = subprocess.run(
             add_cmd,
