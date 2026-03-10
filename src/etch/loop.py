@@ -206,7 +206,7 @@ def run(
                     signals.extract_summary(_fixer_output)
                     or signals.extract_commit_message(_fixer_output, fallback="")
                 )
-                if no_git and (not _raw_summary or _raw_summary.lower().startswith("nothing")):
+                if no_git and (not _raw_summary or _raw_summary.lower().startswith("nothing to fix")):
                     disp.finish_phase("fixer", status="no changes", detail="nothing to fix",
                                       duration=fixer_duration, success=True)
                     iter_entry["fixer"] = {"status": "no changes", "detail": "nothing to fix"}

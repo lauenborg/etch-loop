@@ -71,8 +71,8 @@ def load_break(path: str | Path | None = None) -> str:
         if candidate.exists() and candidate.is_file():
             try:
                 content = candidate.read_text(encoding="utf-8")
-            except OSError:
-                continue
+            except OSError as exc:
+                raise PromptError(f"BREAK.md exists but is unreadable: {candidate}") from exc
             if not content.strip():
                 raise PromptError(f"BREAK.md is empty: {candidate}")
             return content
@@ -137,8 +137,8 @@ def load_scan(path: str | Path | None = None) -> str:
         if candidate.exists() and candidate.is_file():
             try:
                 content = candidate.read_text(encoding="utf-8")
-            except OSError:
-                continue
+            except OSError as exc:
+                raise PromptError(f"SCAN.md exists but is unreadable: {candidate}") from exc
             if not content.strip():
                 raise PromptError(f"SCAN.md is empty: {candidate}")
             return content
