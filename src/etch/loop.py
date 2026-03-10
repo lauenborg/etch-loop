@@ -63,6 +63,7 @@ def run(
         "reason": "done",
         "elapsed": 0.0,
     }
+    last_breaker_signal: str | None = None  # None = breaker hasn't run yet
 
     with display.EtchDisplay(target=str(prompt_path.parent)) as disp:
         for iteration in range(1, max_iterations + 1):
@@ -109,8 +110,14 @@ def run(
                     duration=fixer_duration,
                     success=True,
                 )
-                stats["reason"] = "no_changes"
-                break
+                # If the breaker has never run (first iteration with no diff),
+                # stop immediately — nothing was ever changed, nothing to challenge.
+                # If the breaker previously found issues, run it once more to
+                # confirm whether those issues are still present or now resolved.
+                if last_breaker_signal != "issues":
+                    stats["reason"] = "no_changes"
+                    break
+                # Fall through to run the breaker one final time
 
             # ── Commit ────────────────────────────────────────────────────────
             commit_msg = f"fix(edge): iteration {iteration}"
@@ -156,6 +163,7 @@ def run(
 
             breaker_duration = time.monotonic() - breaker_start
             signal = signals.parse(breaker_output)
+            last_breaker_signal = signal
             finding = signals.extract_finding(breaker_output)
 
             if signal == "clear":
