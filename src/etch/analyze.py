@@ -173,6 +173,7 @@ For each issue, include the file path, line number (if known), and a one-line de
 ## Rules
 
 1. DO NOT edit any files — read only
+   **IGNORE the `etch-loop/` directory entirely** — it contains etch tool metadata, not production code
 2. Only report issues you are confident are genuine bugs — not observations, not style, not "could be cleaner"
 3. If something is already handled correctly, do NOT report it — even if the handling is unusual
 4. If you are unsure whether something is a bug, leave it out
@@ -213,6 +214,7 @@ Scan the codebase for:
 
 ## Rules
 
+0. **IGNORE the `etch-loop/` directory entirely** — it contains etch tool metadata, not production code
 1. Fix only what you find — do not refactor, rename, or reorganize
 2. Do not add comments explaining what you fixed
 3. If you find nothing, make no changes
@@ -255,6 +257,7 @@ Be adversarial — think like someone actively trying to make this code fail.
 ## Rules
 
 1. DO NOT edit any files — read only
+   **IGNORE the `etch-loop/` directory entirely** — it contains etch tool metadata, not production code
 2. Report your findings clearly, one per line
 3. Before the signal token, write your summary in this exact format — it appears directly in the terminal:
    `<etch_summary>2 issues — unguarded empty list in sorter.py:14, exception swallowed in loader.py:67</etch_summary>`
@@ -300,6 +303,7 @@ You are a test engineer. The fixer has just made changes. Your job is to write t
 
 ## Rules
 
+0. **IGNORE the `etch-loop/` directory entirely** — it contains etch tool metadata, not production code
 1. You MAY edit test files — that is your job
 2. Do NOT touch production code — only tests
 3. If tests fail because of flawed test logic, fix the test and re-run before reporting
