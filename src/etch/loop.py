@@ -17,6 +17,7 @@ def run(
     no_commit: bool = False,
     dry_run: bool = False,
     verbose: bool = False,
+    focus: str | None = None,
 ) -> None:
     """Run the fix-break loop.
 
@@ -36,6 +37,9 @@ def run(
         display.print_error(str(exc))
         return
 
+    if focus:
+        prompt_text += f"\n\n## User focus\n\nConcentrate specifically on: {focus}\n"
+
     # ── Dry run ───────────────────────────────────────────────────────────────
     if dry_run:
         display.print_dry_run(prompt_text)
@@ -47,6 +51,9 @@ def run(
     except PromptError as exc:
         display.print_error(str(exc))
         return
+
+    if focus:
+        break_text += f"\n\n## User focus\n\nConcentrate your adversarial review on: {focus}\n"
 
     start_time = time.monotonic()
     stats: dict = {

@@ -38,6 +38,10 @@ def _write_prompt(dest: Path, content: str, label: str) -> None:
 
 @app.command()
 def run(
+    focus: str = typer.Argument(
+        default=None,
+        help="Optional focus description, e.g. 'the auth module' or 'error handling in payments'.",
+    ),
     prompt: str = typer.Option(
         "./ETCH.md",
         "--prompt",
@@ -71,7 +75,14 @@ def run(
         is_flag=True,
     ),
 ) -> None:
-    """Run the fix-break loop against the current repository."""
+    """Run the fix-break loop against the current repository.
+
+    Optionally pass a focus description to narrow the scan:
+
+      etch run "the authentication module"
+
+      etch run "error handling in the payments flow"
+    """
     try:
         loop.run(
             prompt_path=prompt,
@@ -79,6 +90,7 @@ def run(
             no_commit=no_commit,
             dry_run=dry_run,
             verbose=verbose,
+            focus=focus,
         )
     except KeyboardInterrupt:
         display.print_interrupted()
