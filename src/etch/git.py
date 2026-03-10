@@ -56,6 +56,28 @@ def has_changes() -> bool:
     return bool(status.stdout.strip())
 
 
+def changed_files(since_commits: int = 1) -> list[str]:
+    """Return files changed in the last N commits.
+
+    Used to focus the breaker on files the fixer actually touched,
+    rather than the entire codebase.
+
+    Returns an empty list if git is unavailable or no commits exist.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", f"HEAD~{since_commits}", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip().splitlines()
+    except (OSError, FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return []
+
+
 def commit(message: str, paths: list[str] | None = None) -> None:
     """Stage all changes and create a commit.
 

@@ -207,8 +207,22 @@ def run(
             # ── Breaker phase ─────────────────────────────────────────────────
             disp.start_phase("breaker")
             breaker_start = time.monotonic()
+            # Focus the breaker only on files the fixer actually changed.
+            # This prevents the breaker from finding brand-new issues in
+            # untouched files, which causes the loop to thrash.
+            effective_break_text = break_text
+            if not no_git:
+                recent_files = git.changed_files(since_commits=1)
+                if recent_files:
+                    files_list = "\n".join(f"- {f}" for f in recent_files)
+                    effective_break_text = break_text + (
+                        f"\n\n## Scope for this iteration\n\n"
+                        f"The fixer just changed these files — review ONLY these:\n"
+                        f"{files_list}\n\n"
+                        f"Do not scan files that were not changed.\n"
+                    )
             try:
-                breaker_output = agent.run(break_text, verbose=verbose)
+                breaker_output = agent.run(effective_break_text, verbose=verbose)
             except AgentError as exc:
                 disp.finish_phase("breaker", status="error", detail=str(exc),
                                   duration=time.monotonic() - breaker_start, success=False)
