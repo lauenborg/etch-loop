@@ -13,6 +13,7 @@ def run(
     prompt: str,
     verbose: bool = False,
     tick_callback: Callable[[str], None] | None = None,
+    timeout: int = 300,
 ) -> str:
     """Run the Claude agent with the given prompt piped to stdin.
 
@@ -58,7 +59,7 @@ def run(
         try:
             process.stdin.write(prompt)
             process.stdin.close()
-        except BrokenPipeError as exc:
+        except OSError as exc:
             stdin_exc.append(exc)
 
     stdin_writer = threading.Thread(target=write_stdin, daemon=True)
@@ -71,11 +72,8 @@ def run(
         process.kill()
         raise AgentError(f"Failed to write prompt to claude stdin: {stdin_exc[0]}") from stdin_exc[0]
 
-    if process.stdout is None:
-        process.kill()
-        raise AgentError("claude subprocess has no stdout")
-
     output_lines: list[str] = []
+    stderr_lines: list[str] = []
     lock = threading.Lock()
 
     def read_stdout() -> None:
@@ -87,12 +85,20 @@ def run(
             if tick_callback is not None:
                 tick_callback(line)
 
+    def read_stderr() -> None:
+        for line in process.stderr:
+            stderr_lines.append(line)
+
     reader = threading.Thread(target=read_stdout, daemon=True)
+    stderr_reader = threading.Thread(target=read_stderr, daemon=True)
     reader.start()
-    reader.join(timeout=300)
+    stderr_reader.start()
+    reader.join(timeout=timeout)
     if reader.is_alive():
         process.kill()
         raise AgentError("claude subprocess timed out (output reader still running)")
+
+    stderr_reader.join(timeout=10)
 
     try:
         process.wait(timeout=10)
@@ -100,10 +106,7 @@ def run(
         process.kill()
         raise AgentError("claude subprocess timed out waiting for exit")
 
-    # Capture stderr for error reporting
-    stderr_output = ""
-    if process.stderr:
-        stderr_output = process.stderr.read().strip()
+    stderr_output = "".join(stderr_lines).strip()
 
     if process.returncode != 0:
         detail = stderr_output or "(no stderr)"

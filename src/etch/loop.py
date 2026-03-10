@@ -50,7 +50,11 @@ def run(
         return
 
     # Runner is optional — None means the phase is skipped
-    run_text = prompt.load_run(prompt_path)
+    try:
+        run_text = prompt.load_run(prompt_path)
+    except PromptError as exc:
+        display.print_error(str(exc))
+        return
 
     if focus:
         scan_text += f"\n\n## User focus\n\nConcentrate on: {focus}\n"
@@ -105,6 +109,15 @@ def run(
                 iteration_log.append(iter_entry)
                 break
 
+            if scanner_signal == "empty":
+                disp.finish_phase("scanner", status="no signal",
+                                  detail="agent produced no output token",
+                                  duration=scanner_duration, success=False)
+                iter_entry["scanner"] = {"status": "no signal", "detail": "agent produced no output token"}
+                stats["reason"] = "agent_error"
+                iteration_log.append(iter_entry)
+                break
+
             disp.finish_phase("scanner", status="issues found",
                               detail=scanner_detail or "issues found",
                               duration=scanner_duration, success=False)
@@ -156,34 +169,34 @@ def run(
                         stats["reason"] = "no_changes"
                         iteration_log.append(iter_entry)
                         break
-                    iteration_log.append(iter_entry)
                     # Fall through to breaker
 
             # ── Commit ────────────────────────────────────────────────────────
-            fixer_summary = (
-                signals.extract_summary(_fixer_output)
-                or signals.extract_commit_message(_fixer_output, fallback="")
-            )
-            commit_msg = signals.extract_commit_message(
-                _fixer_output, fallback=f"fix(edge): iteration {iteration}"
-            )
-            if not no_git and not no_commit:
-                try:
-                    git.commit(commit_msg)
-                except GitError as exc:
-                    disp.finish_phase("fixer", status="commit error", detail=str(exc),
-                                      duration=fixer_duration, success=False)
-                    stats["reason"] = "git_error"
-                    iteration_log.append(iter_entry)
-                    break
+            if no_git or changed:
+                fixer_summary = (
+                    signals.extract_summary(_fixer_output)
+                    or signals.extract_commit_message(_fixer_output, fallback="")
+                )
+                commit_msg = signals.extract_commit_message(
+                    _fixer_output, fallback=f"fix(edge): iteration {iteration}"
+                )
+                if not no_git and not no_commit:
+                    try:
+                        git.commit(commit_msg)
+                    except GitError as exc:
+                        disp.finish_phase("fixer", status="commit error", detail=str(exc),
+                                          duration=fixer_duration, success=False)
+                        stats["reason"] = "git_error"
+                        iteration_log.append(iter_entry)
+                        break
 
-            disp.record_fix()
-            stats["fixes"] += 1
-            status_label = "changed" if (no_git or no_commit) else "committed"
-            fixer_detail = fixer_summary or commit_msg
-            disp.finish_phase("fixer", status=status_label, detail=fixer_detail,
-                              duration=fixer_duration, success=True)
-            iter_entry["fixer"] = {"status": status_label, "detail": fixer_detail}
+                disp.record_fix()
+                stats["fixes"] += 1
+                status_label = "changed" if (no_git or no_commit) else "committed"
+                fixer_detail = fixer_summary or commit_msg
+                disp.finish_phase("fixer", status=status_label, detail=fixer_detail,
+                                  duration=fixer_duration, success=True)
+                iter_entry["fixer"] = {"status": status_label, "detail": fixer_detail}
 
             # ── Breaker phase ─────────────────────────────────────────────────
             disp.start_phase("breaker")
@@ -214,6 +227,14 @@ def run(
                 stats["reason"] = "clear"
                 iteration_log.append(iter_entry)
                 break
+            elif signal == "empty":
+                disp.finish_phase("breaker", status="no signal",
+                                  detail="agent produced no output token",
+                                  duration=breaker_duration, success=False)
+                iter_entry["breaker"] = {"status": "no signal", "detail": "agent produced no output token"}
+                stats["reason"] = "agent_error"
+                iteration_log.append(iter_entry)
+                break
             else:
                 disp.record_issue()
                 stats["issues"] += 1
@@ -232,7 +253,7 @@ def run(
             disp.start_phase("runner")
             runner_start = time.monotonic()
             try:
-                runner_output = agent.run(run_text, verbose=verbose)
+                runner_output = agent.run(run_text, verbose=verbose, timeout=600)
                 runner_duration = time.monotonic() - runner_start
                 runner_signal = signals.parse(runner_output)
                 runner_detail = (
