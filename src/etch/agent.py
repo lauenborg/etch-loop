@@ -73,7 +73,7 @@ def run(
             pass
         try:
             process.stdin.close()
-        except OSError:
+        except (OSError, ValueError):
             pass
         raise AgentError("Timed out writing prompt to claude stdin")
     if stdin_exc:
