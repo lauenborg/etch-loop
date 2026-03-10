@@ -93,6 +93,12 @@ def run(
         help="Stream agent output to the terminal.",
         is_flag=True,
     ),
+    user: bool = typer.Option(
+        False,
+        "--user",
+        help="Add a user-perspective lens: scanner and breaker also look for realistic user inputs and sequences that the code doesn't handle.",
+        is_flag=True,
+    ),
 ) -> None:
     """Run the fix-break loop against the current repository.
 
@@ -111,6 +117,7 @@ def run(
             dry_run=dry_run,
             verbose=verbose,
             focus=focus,
+            user=user,
         )
     except KeyboardInterrupt:
         display.print_interrupted()

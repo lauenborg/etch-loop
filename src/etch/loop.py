@@ -11,6 +11,25 @@ from etch.git import GitError
 from etch.prompt import PromptError, load_scan
 
 
+_USER_PERSPECTIVE = """
+## User perspective (additional lens)
+
+Also think about this code from the perspective of a real end user interacting with it.
+What inputs, sequences, or behaviors would a realistic user trigger that the code doesn't handle?
+
+Look for:
+- Empty, whitespace-only, or missing inputs where the code assumes content
+- Inputs at the edges of what the interface allows (very long strings, zero, negative numbers)
+- Unexpected but valid orderings of operations (calling things out of sequence)
+- Malformed or non-UTF-8 data coming from files, network, or user input
+- Concurrent use (two users/processes doing the same thing simultaneously)
+- Users who skip optional steps, then trigger code that assumed they ran
+- Realistic typos or near-valid inputs that bypass validation
+
+Report only cases where the code would actually fail or behave incorrectly — not hypothetical misuse.
+"""
+
+
 def run(
     prompt_path: str | Path,
     max_iterations: int = 20,
@@ -19,6 +38,7 @@ def run(
     dry_run: bool = False,
     verbose: bool = False,
     focus: str | None = None,
+    user: bool = False,
 ) -> None:
     """Run the scan-fix-break loop."""
     prompt_path = Path(prompt_path)
@@ -59,6 +79,10 @@ def run(
     if focus:
         scan_text += f"\n\n## User focus\n\nConcentrate on: {focus}\n"
         break_text += f"\n\n## User focus\n\nConcentrate your adversarial review on: {focus}\n"
+
+    if user:
+        scan_text += _USER_PERSPECTIVE
+        break_text += _USER_PERSPECTIVE
 
     start_time = time.monotonic()
     stats: dict = {
