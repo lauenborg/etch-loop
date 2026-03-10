@@ -59,7 +59,7 @@ def run(
         try:
             process.stdin.write(prompt)
             process.stdin.close()
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             stdin_exc.append(exc)
 
     stdin_writer = threading.Thread(target=write_stdin, daemon=True)
