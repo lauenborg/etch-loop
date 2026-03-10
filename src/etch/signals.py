@@ -38,6 +38,41 @@ def parse(output: str) -> str:
     return "issues"
 
 
+def extract_commit_message(output: str, fallback: str) -> str:
+    """Extract a short commit message from fixer output.
+
+    Looks for the first substantive line that describes what was changed.
+    Falls back to `fallback` if nothing useful is found.
+    Returns a string starting with 'fix(edge): '.
+    """
+    if not isinstance(output, str) or not output.strip():
+        return fallback
+
+    _SKIP_STARTS = ("i ", "i've ", "i have ", "here ", "the following", "done", "no ")
+    _SKIP_WORDS = {"ok", "done", "nothing", "complete", "finished"}
+
+    for line in output.splitlines():
+        stripped = line.strip().lstrip("-*•").strip().strip("`").strip()
+        if not stripped or len(stripped) < 8:
+            continue
+        if stripped.startswith("#"):
+            continue
+        if all(c in _PUNCTUATION_ONLY for c in stripped):
+            continue
+        lower = stripped.lower()
+        if lower in _SKIP_WORDS:
+            continue
+        if any(lower.startswith(p) for p in _SKIP_STARTS):
+            continue
+        # Trim to a reasonable length and strip trailing punctuation
+        msg = stripped[:72].rstrip(".,;:")
+        if not msg.lower().startswith("fix"):
+            msg = f"fix(edge): {msg[0].lower()}{msg[1:]}"
+        return msg
+
+    return fallback
+
+
 def extract_finding(output: str) -> str:
     """Extract first meaningful line before the signal token.
 

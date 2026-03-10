@@ -120,7 +120,9 @@ def run(
                 # Fall through to run the breaker one final time
 
             # ── Commit ────────────────────────────────────────────────────────
-            commit_msg = f"fix(edge): iteration {iteration}"
+            commit_msg = signals.extract_commit_message(
+                _fixer_output, fallback=f"fix(edge): iteration {iteration}"
+            )
             if not no_commit:
                 try:
                     git.commit(commit_msg)
