@@ -67,7 +67,10 @@ def run(
     stdin_writer.join(timeout=30)
     if stdin_writer.is_alive():
         process.kill()
-        process.wait()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            pass
         try:
             process.stdin.close()
         except OSError:
@@ -75,7 +78,10 @@ def run(
         raise AgentError("Timed out writing prompt to claude stdin")
     if stdin_exc:
         process.kill()
-        process.wait()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            pass
         try:
             process.stdin.close()
         except OSError:

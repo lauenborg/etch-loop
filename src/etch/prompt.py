@@ -28,7 +28,7 @@ def load(path: str | Path) -> str:
     try:
         content = p.read_text(encoding="utf-8")
     except OSError as e:
-        raise PromptError(f"Prompt file not found: {p}") from e
+        raise PromptError(f"Cannot read prompt file: {p}: {e}") from e
     if not content.strip():
         raise PromptError(f"Prompt file is empty: {p}")
 
