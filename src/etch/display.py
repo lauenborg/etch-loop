@@ -375,21 +375,23 @@ class InitDisplay:
             tick = self._tick
 
         table = Table.grid(padding=(0, 1))
-        table.add_column(width=2)
-        table.add_column()
+        table.add_column(width=2)   # symbol
+        table.add_column(width=12)  # label
+        table.add_column()          # detail / scanbar
 
         for sym, color, text in lines:
             table.add_row(
                 Text(sym, style=Style(color=color)),
                 Text(text, style=Style(color=FG)),
+                Text(""),
             )
 
         if scanning:
-            row_content: RenderableType = Columns([
-                Text(f"{SYM_RUN}  analyzing  ", style=Style(color=AMBER)),
+            table.add_row(
+                Text(SYM_RUN, style=Style(color=AMBER)),
+                Text("analyzing", style=Style(color=AMBER)),
                 ScanBar(tick),
-            ])
-            table.add_row(Text(""), row_content)
+            )
 
         return Panel(
             table,
@@ -470,6 +472,12 @@ def print_summary(stats: dict[str, Any]) -> None:
         title = f"[{AMBER}]- stopped (max iterations)[/{AMBER}]"
     elif reason == "no_changes":
         title = f"[{GREEN}]+ clean — fixer found nothing[/{GREEN}]"
+    elif reason == "build_failed":
+        title = f"[{RED}]x build failed[/{RED}]"
+    elif reason == "agent_error":
+        title = f"[{RED}]x agent error[/{RED}]"
+    elif reason == "git_error":
+        title = f"[{RED}]x git error[/{RED}]"
     else:
         title = f"[{FG}]done[/{FG}]"
 
