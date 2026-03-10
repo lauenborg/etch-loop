@@ -84,8 +84,18 @@ def run(
             # ── Scanner phase ─────────────────────────────────────────────────
             disp.start_phase("scanner")
             scanner_start = time.monotonic()
+            # Give the scanner any unresolved breaker findings as extra hints,
+            # so it can verify whether those areas are still broken.
+            effective_scan_text = scan_text
+            if last_breaker_output:
+                effective_scan_text += (
+                    f"\n\n## Unresolved areas from previous adversarial review\n\n"
+                    f"{last_breaker_output.strip()}\n\n"
+                    f"Pay special attention to these spots — confirm whether each is "
+                    f"still a genuine bug or has already been fixed.\n"
+                )
             try:
-                scanner_output = agent.run(scan_text, verbose=verbose)
+                scanner_output = agent.run(effective_scan_text, verbose=verbose)
             except AgentError as exc:
                 disp.finish_phase("scanner", status="error", detail=str(exc),
                                   duration=time.monotonic() - scanner_start, success=False)
@@ -124,17 +134,13 @@ def run(
             iter_entry["scanner"] = {"status": "issues found", "detail": scanner_detail}
 
             # ── Build fixer prompt ────────────────────────────────────────────
+            # Only the scanner's confirmed findings go to the fixer — the scanner
+            # already re-checked any breaker issues and reported only real ones.
             fixer_prompt = prompt_text
             fixer_prompt += (
                 f"\n\n## Scanner findings\n\n{scanner_output.strip()}\n\n"
                 f"Fix these specific issues.\n"
             )
-            if last_breaker_output:
-                fixer_prompt += (
-                    f"\n\n## Breaker findings from previous iteration\n\n"
-                    f"{last_breaker_output.strip()}\n\n"
-                    f"Also address these if not already covered above.\n"
-                )
 
             # ── Fixer phase ───────────────────────────────────────────────────
             disp.start_phase("fixer")
