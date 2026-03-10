@@ -195,10 +195,10 @@ def run(
                         iteration_log.append(iter_entry)
                         break
 
-                if changed:
+                if changed or no_git:
                     disp.record_fix()
                     stats["fixes"] += 1
-                status_label = "changed" if (no_git or no_commit) else "committed"
+                status_label = "no-git" if no_git else ("changed" if no_commit else "committed")
                 fixer_detail = fixer_summary or commit_msg
                 disp.finish_phase("fixer", status=status_label, detail=fixer_detail,
                                   duration=fixer_duration, success=True)
@@ -255,7 +255,7 @@ def run(
             stats["reason"] = "max_iterations"
 
         # ── Runner — final step, only when loop ended cleanly ─────────────────
-        if run_text and stats["reason"] in ("clear", "no_changes"):
+        if run_text and stats["reason"] == "clear":
             disp.start_phase("runner")
             runner_start = time.monotonic()
             try:

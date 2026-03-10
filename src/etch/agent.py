@@ -89,7 +89,8 @@ def run(
 
     def read_stderr() -> None:
         for line in process.stderr:
-            stderr_lines.append(line)
+            with lock:
+                stderr_lines.append(line)
 
     reader = threading.Thread(target=read_stdout, daemon=True)
     stderr_reader = threading.Thread(target=read_stderr, daemon=True)
@@ -111,9 +112,11 @@ def run(
 
     stderr_reader.join(timeout=10)
     if stderr_reader.is_alive():
-        stderr_lines.append("[stderr reader timed out]")
+        with lock:
+            stderr_lines.append("[stderr reader timed out]")
 
-    stderr_output = "".join(stderr_lines).strip()
+    with lock:
+        stderr_output = "".join(stderr_lines).strip()
 
     if process.returncode != 0:
         detail = stderr_output or "(no stderr)"

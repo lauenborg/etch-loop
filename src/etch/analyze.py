@@ -332,7 +332,7 @@ def _detect_run_commands(root: Path) -> list[str]:
     if (root / "package.json").exists():
         try:
             pkg = json.loads((root / "package.json").read_text(encoding="utf-8"))
-            scripts = pkg.get("scripts", {})
+            scripts = pkg.get("scripts") or {}
             if "build" in scripts:
                 commands.append("npm run build")
             if "test" in scripts:

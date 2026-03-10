@@ -65,7 +65,7 @@ def extract_commit_message(output: str, fallback: str) -> str:
         stripped = line.strip().lstrip("-*•").strip().strip("`").strip()
         if not stripped or len(stripped) < 8:
             continue
-        if stripped.startswith(_TOKEN_CLEAR) or stripped.startswith(_TOKEN_ISSUES):
+        if _TOKEN_CLEAR in stripped or _TOKEN_ISSUES in stripped:
             break
         if stripped.startswith("#"):
             continue
@@ -115,7 +115,7 @@ def extract_finding(output: str) -> str:
     lines_before: list[str] = []
     for line in output.splitlines():
         stripped = line.strip().strip("`").strip()
-        if stripped.startswith(_TOKEN_CLEAR) or stripped.startswith(_TOKEN_ISSUES):
+        if _TOKEN_CLEAR in stripped or _TOKEN_ISSUES in stripped:
             break
         lines_before.append(line)
 
