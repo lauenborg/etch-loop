@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import math
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Callable, TypeVar
 
 from rich.columns import Columns
 from rich.console import Console, ConsoleOptions, RenderableType, RenderResult
@@ -16,6 +15,8 @@ from rich.segment import Segment
 from rich.style import Style
 from rich.table import Table
 from rich.text import Text
+
+_T = TypeVar("_T")
 
 from etch import __version__
 
@@ -362,6 +363,35 @@ def print_error(message: str) -> None:
             style=Style(bgcolor=BG),
         )
     )
+
+
+def run_with_scan(label: str, fn: Callable[[], _T]) -> _T:
+    """Run fn() while showing a scan animation. Returns fn()'s result."""
+    result: list[_T] = []
+    error: list[BaseException] = []
+    done = threading.Event()
+
+    def worker() -> None:
+        try:
+            result.append(fn())
+        except BaseException as exc:
+            error.append(exc)
+        finally:
+            done.set()
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    tick = 0
+    with Live(console=_console, refresh_per_second=12) as live:
+        while not done.wait(timeout=TICK_MS / 1000.0):
+            label_text = Text(f"{SYM_RUN}  {label}  ", style=Style(color=AMBER))
+            live.update(Columns([label_text, ScanBar(tick)]))
+            tick += 1
+        live.update(Text(f"{SYM_OK}  {label}", style=Style(color=GREEN)))
+
+    if error:
+        raise error[0]
+    return result[0]
 
 
 def print_analyzing() -> None:

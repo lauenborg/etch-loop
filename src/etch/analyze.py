@@ -110,14 +110,46 @@ def analyze(root: Path | None = None) -> dict:
     }
 
 
-def build_etch_md(info: dict) -> str:
-    """Generate a tailored ETCH.md from analysis results."""
-    scope = _format_scope(info)
+def build_init_prompt(info: dict) -> str:
+    """Build the Claude prompt used during etch init to analyze the codebase."""
+    file_tree = "\n".join(f"  {f}" for f in _list_files(Path.cwd())[:60])
+    if not file_tree:
+        file_tree = "  (no tracked files)"
 
-    lang_line = ""
-    if info["languages"]:
-        primary = info["languages"][0][0]
-        lang_line = f"\nPrimary language: **{primary}**\n"
+    lang_summary = ", ".join(f"{lang} ({n})" for lang, n in info["languages"]) or "unknown"
+    framework = info["framework"] or "unknown"
+
+    return f"""You are analyzing a codebase to configure an automated edge-case hunting tool.
+
+The tool will run Claude Code in a fix-break loop to find and patch edge cases.
+Your job is to write a focused scope description that tells the fixer exactly where to look.
+
+## Codebase stats
+- Framework: {framework}
+- Languages: {lang_summary}
+- Total files: {info["total_files"]}
+
+## File tree
+{file_tree}
+
+## Instructions
+
+Read the key source files in this codebase. Then write a concise scope description covering:
+- The highest-risk areas for edge cases in THIS specific codebase
+- Specific files or modules worth focusing on
+- Any patterns you spotted that suggest missing error handling
+
+Rules:
+- Output ONLY the scope description as plain prose or bullet points
+- No markdown headers, no preamble, no "here is the scope" intro
+- Be specific to this codebase — not generic advice
+- Keep it under 150 words
+"""
+
+
+def build_etch_md(info: dict, agent_scope: str | None = None) -> str:
+    """Generate a tailored ETCH.md from analysis results."""
+    scope = agent_scope.strip() if agent_scope else _format_scope(info)
 
     return f"""# ETCH — fixer prompt
 
@@ -141,7 +173,7 @@ Scan the codebase for:
 4. If you find nothing, make no changes
 
 ## Scope
-{lang_line}
+
 {scope}
 
 ## Commit format
@@ -151,9 +183,9 @@ The harness commits automatically. Each commit will be:
 """
 
 
-def build_break_md(info: dict) -> str:
+def build_break_md(info: dict, agent_scope: str | None = None) -> str:
     """Generate a tailored BREAK.md from analysis results."""
-    scope = _format_scope(info)
+    scope = agent_scope.strip() if agent_scope else _format_scope(info)
 
     return f"""# BREAK — breaker prompt
 

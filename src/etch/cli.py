@@ -6,7 +6,8 @@ from pathlib import Path
 
 import typer
 
-from etch import analyze, display, loop
+from etch import agent, analyze, display, loop
+from etch.agent import AgentError
 
 app = typer.Typer(
     name="etch",
@@ -18,14 +19,22 @@ app = typer.Typer(
 
 @app.command()
 def init() -> None:
-    """Analyze the codebase and write tailored ETCH.md and BREAK.md."""
+    """Analyze the codebase with Claude and write tailored ETCH.md and BREAK.md."""
     root = Path.cwd()
-    display.print_analyzing()
-
     info = analyze.analyze(root)
+    init_prompt = analyze.build_init_prompt(info)
 
-    _write_prompt(root / "ETCH.md", analyze.build_etch_md(info), "ETCH.md")
-    _write_prompt(root / "BREAK.md", analyze.build_break_md(info), "BREAK.md")
+    agent_scope: str | None = None
+    try:
+        agent_scope = display.run_with_scan(
+            "claude analyzing codebase",
+            lambda: agent.run(init_prompt),
+        )
+    except AgentError as exc:
+        display.print_error(f"Agent analysis failed: {exc}\nFalling back to static analysis.")
+
+    _write_prompt(root / "ETCH.md", analyze.build_etch_md(info, agent_scope), "ETCH.md")
+    _write_prompt(root / "BREAK.md", analyze.build_break_md(info, agent_scope), "BREAK.md")
 
 
 def _write_prompt(dest: Path, content: str, label: str) -> None:
