@@ -210,6 +210,7 @@ def run(
             # Focus the breaker only on files the fixer actually changed.
             # This prevents the breaker from finding brand-new issues in
             # untouched files, which causes the loop to thrash.
+            # In --no-git mode we can't determine changed files, so skip scoping.
             effective_break_text = break_text
             if not no_git:
                 recent_files = git.changed_files(since_commits=1)

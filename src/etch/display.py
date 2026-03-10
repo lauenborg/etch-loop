@@ -117,6 +117,7 @@ class EtchDisplay:
             console=self._console,
             refresh_per_second=15,
             transient=False,
+            vertical_overflow="visible",
         )
         self._live.__enter__()
         self._start_ticker()
@@ -345,6 +346,7 @@ class InitDisplay:
             console=self._console,
             refresh_per_second=15,
             transient=False,
+            vertical_overflow="visible",
         )
         self._live.__enter__()
         self._start_ticker()
