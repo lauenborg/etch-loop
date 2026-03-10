@@ -182,6 +182,7 @@ For each issue, include the file path, line number (if known), and a one-line de
 6. Before the signal token, write your summary in this exact format — it appears directly in the terminal:
    `<etch_summary>3 bugs found — null deref in auth.py:42, off-by-one in parser.py:88</etch_summary>`
    `<etch_summary>no confirmed bugs found</etch_summary>`
+   **IMPORTANT: write `<etch_summary>` ONLY in your text response — never inside any file you read or edit.**
 7. End with EXACTLY one of these on its own line:
    `ETCH_ISSUES_FOUND`
    `ETCH_ALL_CLEAR`
@@ -225,6 +226,8 @@ Scan the codebase for:
 After making changes (or deciding there is nothing to fix), write your summary in this exact format — it appears in the terminal and is used as the commit message:
   `<etch_summary>fixed 3 issues — null guard in auth.py, bounds check in parser.py, timeout in agent.py</etch_summary>`
   `<etch_summary>nothing to fix — all reported issues were already handled</etch_summary>`
+
+**IMPORTANT: write `<etch_summary>` ONLY in your text response — never inside any file you edit or create.**
 """
 
 
@@ -256,6 +259,7 @@ Be adversarial — think like someone actively trying to make this code fail.
 3. Before the signal token, write your summary in this exact format — it appears directly in the terminal:
    `<etch_summary>2 issues — unguarded empty list in sorter.py:14, exception swallowed in loader.py:67</etch_summary>`
    `<etch_summary>no issues found — code looks solid</etch_summary>`
+   **IMPORTANT: write `<etch_summary>` ONLY in your text response — never inside any file you read or edit.**
 4. End with EXACTLY one of these on its own line:
    `ETCH_ISSUES_FOUND`
    `ETCH_ALL_CLEAR`
@@ -303,6 +307,7 @@ You are a test engineer. The fixer has just made changes. Your job is to write t
 5. When done, write your summary in this exact format — it appears directly in the terminal:
    `<etch_summary>wrote 4 tests, all 51 passed</etch_summary>`
    `<etch_summary>2 tests failed — TypeError in test_auth.py:38, production bug in token.py:12</etch_summary>`
+   **IMPORTANT: write `<etch_summary>` ONLY in your text response — never inside any file you edit or create.**
 6. End with EXACTLY one of these on its own line:
    `ETCH_ALL_CLEAR` — if all tests pass
    `ETCH_ISSUES_FOUND` — if tests reveal a bug in production code

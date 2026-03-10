@@ -51,7 +51,9 @@ def extract_commit_message(output: str, fallback: str) -> str:
     # Prefer the explicit ETCH_SUMMARY line
     summary = extract_summary(output)
     if summary:
-        msg = summary[:72].rstrip(".,;:")
+        msg = summary[:72].rstrip(".,;: ")
+        if not msg:
+            return fallback
         if not msg.lower().startswith("fix"):
             msg = f"fix(edge): {msg[0].lower()}{msg[1:]}"
         return msg
@@ -73,8 +75,8 @@ def extract_commit_message(output: str, fallback: str) -> str:
         if any(lower.startswith(p) for p in _SKIP_STARTS):
             continue
         # Trim to a reasonable length and strip trailing punctuation
-        msg = stripped[:72].rstrip(".,;:")
-        if not msg:
+        msg = stripped[:72].rstrip(".,;: ")
+        if not msg or not any(c.isalnum() for c in msg):
             continue
         if not msg.lower().startswith("fix"):
             msg = f"fix(edge): {msg[0].lower()}{msg[1:]}"

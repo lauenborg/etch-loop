@@ -22,6 +22,7 @@ Be adversarial — think like someone actively trying to make this code fail.
 3. Before the signal token, write your summary in this exact format — it appears directly in the terminal:
    `<etch_summary>2 issues — unguarded empty list in sorter.py:14, exception swallowed in loader.py:67</etch_summary>`
    `<etch_summary>no issues found — code looks solid</etch_summary>`
+   **IMPORTANT: write `<etch_summary>` ONLY in your text response — never inside any file you read or edit.**
 4. End with EXACTLY one of these on its own line:
    `ETCH_ISSUES_FOUND`
    `ETCH_ALL_CLEAR`

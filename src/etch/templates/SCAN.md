@@ -26,6 +26,7 @@ For each issue, include the file path, line number (if known), and a one-line de
 6. Before the signal token, write your summary in this exact format — it appears directly in the terminal:
    `<etch_summary>3 bugs found — null deref in auth.py:42, off-by-one in parser.py:88</etch_summary>`
    `<etch_summary>no confirmed bugs found</etch_summary>`
+   **IMPORTANT: write `<etch_summary>` ONLY in your text response — never inside any file you read or edit.**
 7. End with EXACTLY one of these on its own line:
    `ETCH_ISSUES_FOUND`
    `ETCH_ALL_CLEAR`
