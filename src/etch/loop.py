@@ -209,9 +209,12 @@ def run(
                 _NO_FIX_PREFIXES = (
                     "nothing", "no changes", "no fix", "no issue", "no edit",
                     "no modif", "already", "skipped", "i skipped",
+                    "all issues resolved", "looks good", "the code is correct",
+                    "no problems found", "everything is fine", "no bugs",
+                    "no errors", "code is fine", "code looks",
                 )
                 _fs_lower = fixer_summary.lower() if fixer_summary else ""
-                _fixer_no_change = not fixer_summary or any(
+                _fixer_no_change = bool(fixer_summary) and any(
                     _fs_lower.startswith(p) for p in _NO_FIX_PREFIXES
                 )
                 if no_git and _fixer_no_change:
