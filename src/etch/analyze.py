@@ -179,9 +179,12 @@ For each issue, include the file path, line number (if known), and a one-line de
 5. List each confirmed issue on its own line, e.g.:
    - src/auth.py:42 — crashes with empty token string (no guard)
    - src/api.js:108 — unhandled promise rejection will silently fail
-6. End your output with EXACTLY one of these tokens on its own line:
-   - `ETCH_ISSUES_FOUND` — if you found confirmed bugs worth fixing
-   - `ETCH_ALL_CLEAR` — if the code looks solid or you found nothing certain
+6. Before the signal token, write this line — it appears directly in the terminal:
+   `ETCH_SUMMARY: <one sentence, max 80 chars, e.g. "3 bugs found — null deref in auth.py:42, off-by-one in parser.py:88">`
+   `ETCH_SUMMARY: no confirmed bugs found`
+7. End with EXACTLY one of these on its own line:
+   `ETCH_ISSUES_FOUND`
+   `ETCH_ALL_CLEAR`
 
 ## Scope
 
@@ -210,18 +213,21 @@ Scan the codebase for:
 ## Rules
 
 1. Fix only what you find — do not refactor, rename, or reorganize
-2. One logical fix per commit (the harness will commit for you)
-3. Do not add comments explaining what you fixed
-4. If you find nothing, make no changes
+2. Do not add comments explaining what you fixed
+3. If you find nothing, make no changes
 
 ## Scope
 
 {scope}
 
-## Commit format
+## Terminal output (required)
 
-The harness commits automatically. Each commit will be:
-  fix(edge): <short description of what was fixed>
+After making changes (or deciding there is nothing to fix), write this line — it appears directly in the terminal and is used as the commit message:
+  `ETCH_SUMMARY: <one sentence, max 80 chars>`
+
+Examples:
+  `ETCH_SUMMARY: fixed 3 issues — null guard in auth.py, bounds check in parser.py, timeout in agent.py`
+  `ETCH_SUMMARY: nothing to fix — all reported issues were already handled`
 """
 
 
@@ -250,9 +256,12 @@ Be adversarial — think like someone actively trying to make this code fail.
 
 1. DO NOT edit any files — read only
 2. Report your findings clearly, one per line
-3. End your output with EXACTLY one of these tokens on its own line:
-   - `ETCH_ISSUES_FOUND` — if you found anything worth fixing
-   - `ETCH_ALL_CLEAR` — if the code looks solid
+3. Before the signal token, write this line — it appears directly in the terminal:
+   `ETCH_SUMMARY: <one sentence, max 80 chars, e.g. "2 issues — unguarded empty list in sorter.py:14, exception swallowed in loader.py:67">`
+   `ETCH_SUMMARY: no issues found — code looks solid`
+4. End with EXACTLY one of these on its own line:
+   `ETCH_ISSUES_FOUND`
+   `ETCH_ALL_CLEAR`
 
 ## Scope
 
@@ -292,16 +301,15 @@ You are a test engineer. The fixer has just made changes. Your job is to write t
 
 1. You MAY edit test files — that is your job
 2. Do NOT touch production code — only tests
-3. After running, report clearly:
-   - If ALL tests pass:
-     - `ETCH_SUMMARY: <e.g. "wrote 4 tests, all 51 passed">`
-     - `ETCH_ALL_CLEAR`
-   - If ANY test fails due to a bug in the production code:
-     - `ETCH_SUMMARY: <what failed and why>`
-     - Include the relevant error output
-     - `ETCH_ISSUES_FOUND`
-   - If tests fail because the tests themselves are wrong (flawed test logic):
-     - Fix the test and re-run before reporting
+3. If tests fail because of flawed test logic, fix the test and re-run before reporting
+4. When done, write this line — it appears directly in the terminal:
+   `ETCH_SUMMARY: <one sentence, max 80 chars>`
+   Examples:
+   `ETCH_SUMMARY: wrote 4 tests, all 51 passed`
+   `ETCH_SUMMARY: 2 tests failed — TypeError in test_auth.py:38, production bug in token.py:12`
+5. End with EXACTLY one of these on its own line:
+   `ETCH_ALL_CLEAR` — if all tests pass
+   `ETCH_ISSUES_FOUND` — if tests reveal a bug in production code
 """
 
 

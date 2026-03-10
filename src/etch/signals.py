@@ -35,14 +35,22 @@ def parse(output: str) -> str:
 def extract_commit_message(output: str, fallback: str) -> str:
     """Extract a short commit message from fixer output.
 
-    Looks for the first substantive line that describes what was changed.
-    Falls back to `fallback` if nothing useful is found.
+    Tries ETCH_SUMMARY first (the explicit summary line), then falls back to
+    scanning for the first substantive line that describes what was changed.
     Returns a string starting with 'fix(edge): '.
     """
     if not isinstance(output, str) or not output.strip():
         return fallback
 
-    _SKIP_STARTS = ("i ", "i've ", "i have ", "here ", "the following", "done", "no ")
+    # Prefer the explicit ETCH_SUMMARY line
+    summary = extract_summary(output)
+    if summary:
+        msg = summary[:72].rstrip(".,;:")
+        if not msg.lower().startswith("fix"):
+            msg = f"fix(edge): {msg[0].lower()}{msg[1:]}"
+        return msg
+
+    _SKIP_STARTS = ("i ", "i've ", "i have ", "here ", "here's", "the following", "done", "no ", "summary", "below")
     _SKIP_WORDS = {"ok", "done", "nothing", "complete", "finished"}
 
     for line in output.splitlines():

@@ -15,19 +15,18 @@ Scan the codebase for:
 ## Rules
 
 1. Fix only what you find — do not refactor, rename, or reorganize
-2. One logical fix per commit (the harness will commit for you)
-3. Do not add comments explaining what you fixed
-4. If you find nothing, make no changes
+2. Do not add comments explaining what you fixed
+3. If you find nothing, make no changes
 
 ## Scope
 
 Focus on: [edit this to narrow your scope, e.g. "src/auth/", "the payment module"]
 
-## Output format
+## Terminal output (required)
 
-After making your changes, write one line at the end of your output:
-  ETCH_SUMMARY: <concise summary, e.g. "fixed 3 issues — added null guards in auth.py, guarded empty input in parser.py">
-  ETCH_SUMMARY: no changes — nothing to fix
+After making changes (or deciding there is nothing to fix), write this line — it appears directly in the terminal and is used as the commit message:
+  `ETCH_SUMMARY: <one sentence, max 80 chars>`
 
-The harness commits automatically. Each commit will be:
-  fix(edge): <short description of what was fixed>
+Examples:
+  `ETCH_SUMMARY: fixed 3 issues — null guard in auth.py, bounds check in parser.py, timeout in agent.py`
+  `ETCH_SUMMARY: nothing to fix — all reported issues were already handled`
