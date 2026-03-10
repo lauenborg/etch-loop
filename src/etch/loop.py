@@ -49,6 +49,9 @@ def run(
         display.print_error(str(exc))
         return
 
+    # Runner is optional — None means the phase is skipped
+    run_text = prompt.load_run(prompt_path)
+
     if focus:
         scan_text += f"\n\n## User focus\n\nConcentrate on: {focus}\n"
         break_text += f"\n\n## User focus\n\nConcentrate your adversarial review on: {focus}\n"
@@ -63,9 +66,59 @@ def run(
     }
     last_breaker_signal: str | None = None
     last_breaker_output: str | None = None
+    last_runner_output: str | None = None
     iteration_log: list[dict] = []
 
     with display.EtchDisplay(target=str(prompt_path.parent)) as disp:
+
+        # ── Runner helper — called at every clean exit point ──────────────────
+        def try_runner(iter_entry: dict) -> str:
+            """Run the runner phase if configured.
+
+            Returns:
+                "skip"   — no RUN.md, proceed with clean exit
+                "clear"  — runner passed, proceed with clean exit
+                "issues" — runner failed, continue the loop
+                "error"  — agent error, break the loop
+            """
+            nonlocal last_runner_output
+            if not run_text:
+                return "skip"
+
+            disp.start_phase("runner")
+            runner_start = time.monotonic()
+            try:
+                runner_output = agent.run(run_text, verbose=verbose)
+            except AgentError as exc:
+                disp.finish_phase("runner", status="error", detail=str(exc),
+                                  duration=time.monotonic() - runner_start, success=False)
+                return "error"
+
+            runner_duration = time.monotonic() - runner_start
+            runner_signal = signals.parse(runner_output)
+            runner_detail = (
+                signals.extract_summary(runner_output)
+                or signals.extract_finding(runner_output)
+            )
+
+            if runner_signal == "clear":
+                disp.finish_phase("runner", status="all clear",
+                                  detail=runner_detail or "build passed",
+                                  duration=runner_duration, success=True)
+                iter_entry["runner"] = {"status": "all clear", "detail": runner_detail}
+                last_runner_output = None
+                return "clear"
+            else:
+                disp.record_issue()
+                stats["issues"] += 1
+                disp.finish_phase("runner", status="build failed",
+                                  detail=runner_detail or "build failed",
+                                  duration=runner_duration, success=False)
+                iter_entry["runner"] = {"status": "build failed", "detail": runner_detail}
+                last_runner_output = runner_output
+                return "issues"
+
+        # ── Main loop ─────────────────────────────────────────────────────────
         for iteration in range(1, max_iterations + 1):
             stats["iterations"] = iteration
             disp.start_iteration(iteration)
@@ -95,9 +148,19 @@ def run(
                                   detail=scanner_detail or "nothing to fix",
                                   duration=scanner_duration, success=True)
                 iter_entry["scanner"] = {"status": "all clear", "detail": scanner_detail}
-                stats["reason"] = "no_changes"
-                iteration_log.append(iter_entry)
-                break
+                runner_result = try_runner(iter_entry)
+                if runner_result == "error":
+                    stats["reason"] = "agent_error"
+                    iteration_log.append(iter_entry)
+                    break
+                elif runner_result == "issues":
+                    stats["reason"] = "issues"
+                    iteration_log.append(iter_entry)
+                    continue
+                else:  # "clear" or "skip"
+                    stats["reason"] = "no_changes"
+                    iteration_log.append(iter_entry)
+                    break
 
             disp.finish_phase("scanner", status="issues found",
                               detail=scanner_detail or "issues found",
@@ -115,6 +178,12 @@ def run(
                     f"\n\n## Breaker findings from previous iteration\n\n"
                     f"{last_breaker_output.strip()}\n\n"
                     f"Also address these if not already covered above.\n"
+                )
+            if last_runner_output:
+                fixer_prompt += (
+                    f"\n\n## Build/test failures from previous iteration\n\n"
+                    f"{last_runner_output.strip()}\n\n"
+                    f"Fix the underlying code issues causing these failures.\n"
                 )
 
             # ── Fixer phase ───────────────────────────────────────────────────
@@ -147,9 +216,19 @@ def run(
                                       duration=fixer_duration, success=True)
                     iter_entry["fixer"] = {"status": "no changes", "detail": "nothing to fix"}
                     if last_breaker_signal != "issues":
-                        stats["reason"] = "no_changes"
-                        iteration_log.append(iter_entry)
-                        break
+                        runner_result = try_runner(iter_entry)
+                        if runner_result == "error":
+                            stats["reason"] = "agent_error"
+                            iteration_log.append(iter_entry)
+                            break
+                        elif runner_result == "issues":
+                            stats["reason"] = "issues"
+                            iteration_log.append(iter_entry)
+                            continue
+                        else:  # "clear" or "skip"
+                            stats["reason"] = "no_changes"
+                            iteration_log.append(iter_entry)
+                            break
                     iteration_log.append(iter_entry)
                     # Fall through to breaker
 
@@ -205,9 +284,19 @@ def run(
                                   detail=breaker_detail or "no issues found",
                                   duration=breaker_duration, success=True)
                 iter_entry["breaker"] = {"status": "all clear", "detail": breaker_detail}
-                stats["reason"] = "clear"
-                iteration_log.append(iter_entry)
-                break
+                runner_result = try_runner(iter_entry)
+                if runner_result == "error":
+                    stats["reason"] = "agent_error"
+                    iteration_log.append(iter_entry)
+                    break
+                elif runner_result == "issues":
+                    stats["reason"] = "issues"
+                    iteration_log.append(iter_entry)
+                    continue
+                else:  # "clear" or "skip"
+                    stats["reason"] = "clear"
+                    iteration_log.append(iter_entry)
+                    break
             else:
                 disp.record_issue()
                 stats["issues"] += 1

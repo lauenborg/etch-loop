@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from collections import Counter
 from pathlib import Path
@@ -257,6 +258,78 @@ Be adversarial — think like someone actively trying to make this code fail.
 
 {scope}
 """
+
+
+def build_run_md(info: dict) -> str:
+    """Generate a tailored RUN.md based on detected build system."""
+    root = info.get("root", Path.cwd())
+    commands = _detect_run_commands(root)
+
+    if commands:
+        cmd_list = "\n".join(f"- `{cmd}`" for cmd in commands)
+    else:
+        cmd_list = "- (detect and run the appropriate build/test command for this project)"
+
+    return f"""# RUN — build and test validation
+
+You are a build validator. The fixer has made changes. Your job is to run the project's build and test suite to confirm everything still works.
+
+## Commands to run
+
+{cmd_list}
+
+## Rules
+
+1. Run each command and observe the output
+2. If ALL commands pass:
+   - Write `ETCH_SUMMARY: <e.g. "all 47 tests passed">`
+   - Write `ETCH_ALL_CLEAR`
+3. If ANY command fails:
+   - Write `ETCH_SUMMARY: <what failed, e.g. "3 tests failed in test_auth.py — TypeError on line 42">`
+   - Include the relevant error output so the fixer can diagnose it
+   - Write `ETCH_ISSUES_FOUND`
+
+Do not fix anything — only run and report.
+"""
+
+
+def _detect_run_commands(root: Path) -> list[str]:
+    """Detect build/test commands from project files."""
+    commands: list[str] = []
+
+    if (root / "pyproject.toml").exists() or (root / "setup.py").exists():
+        commands.append("python -m pytest")
+
+    if (root / "package.json").exists():
+        try:
+            pkg = json.loads((root / "package.json").read_text(encoding="utf-8"))
+            scripts = pkg.get("scripts", {})
+            if "build" in scripts:
+                commands.append("npm run build")
+            if "test" in scripts:
+                commands.append("npm test")
+        except (OSError, json.JSONDecodeError):
+            commands.append("npm test")
+
+    if (root / "Cargo.toml").exists():
+        commands.append("cargo test")
+
+    if (root / "go.mod").exists():
+        commands.append("go test ./...")
+
+    if (root / "Gemfile").exists():
+        commands.append("bundle exec rspec")
+
+    if (root / "mix.exs").exists():
+        commands.append("mix test")
+
+    if (root / "pom.xml").exists():
+        commands.append("mvn test -q")
+
+    if not commands and (root / "Makefile").exists():
+        commands.append("make test")
+
+    return commands
 
 
 def _format_scope(info: dict) -> str:

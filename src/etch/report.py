@@ -67,6 +67,14 @@ def write(
             if detail:
                 lines.append(f"\n> {detail}\n")
 
+        runner = entry.get("runner")
+        if runner:
+            status = runner.get("status", "")
+            detail = runner.get("detail", "")
+            lines.append(f"**runner** — {status}")
+            if detail:
+                lines.append(f"\n> {detail}\n")
+
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
 

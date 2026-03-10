@@ -40,6 +40,7 @@ def init() -> None:
             (etch_dir / "SCAN.md",  analyze.build_scan_md(info, agent_scope),  "etch-loop/SCAN.md"),
             (etch_dir / "ETCH.md",  analyze.build_etch_md(info, agent_scope),  "etch-loop/ETCH.md"),
             (etch_dir / "BREAK.md", analyze.build_break_md(info, agent_scope), "etch-loop/BREAK.md"),
+            (etch_dir / "RUN.md",   analyze.build_run_md(info),                "etch-loop/RUN.md"),
         ]:
             if dest.exists():
                 disp.add_line(display.SYM_NEUTRAL, display.DIM, f"{label} already exists, skipping")

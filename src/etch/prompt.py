@@ -75,6 +75,35 @@ def load_break(path: str | Path | None = None) -> str:
     raise PromptError(f"BREAK.md not found. Searched: {searched}")
 
 
+def load_run(path: str | Path | None = None) -> str | None:
+    """Load RUN.md if it exists. Returns None if not found — runner phase is optional.
+
+    Args:
+        path: Optional path. If this is ETCH.md, looks for RUN.md alongside it.
+
+    Returns:
+        File contents as a string, or None if RUN.md is not present.
+    """
+    candidates: list[Path] = []
+
+    if path is not None:
+        p = Path(path)
+        if p.name.upper() == "RUN.MD":
+            candidates.append(p)
+        else:
+            candidates.append(p.parent / "RUN.md")
+
+    candidates.append(Path.cwd() / "RUN.md")
+
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_file():
+            content = candidate.read_text(encoding="utf-8")
+            if content.strip():
+                return content
+
+    return None  # Optional phase — no error if absent
+
+
 def load_scan(path: str | Path | None = None) -> str:
     """Load and return the content of SCAN.md.
 
