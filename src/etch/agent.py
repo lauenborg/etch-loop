@@ -68,10 +68,18 @@ def run(
     if stdin_writer.is_alive():
         process.kill()
         process.wait()
+        try:
+            process.stdin.close()
+        except OSError:
+            pass
         raise AgentError("Timed out writing prompt to claude stdin")
     if stdin_exc:
         process.kill()
         process.wait()
+        try:
+            process.stdin.close()
+        except OSError:
+            pass
         raise AgentError(f"Failed to write prompt to claude stdin: {stdin_exc[0]}") from stdin_exc[0]
 
     output_lines: list[str] = []
@@ -101,6 +109,9 @@ def run(
         process.kill()
         process.wait()
         stderr_reader.join(timeout=10)
+        if stderr_reader.is_alive():
+            with lock:
+                stderr_lines.append("[stderr reader timed out]")
         raise AgentError("claude subprocess timed out (output reader still running)")
 
     try:

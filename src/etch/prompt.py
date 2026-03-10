@@ -25,7 +25,10 @@ def load(path: str | Path) -> str:
     if not p.is_file():
         raise PromptError(f"Prompt path is not a file: {p}")
 
-    content = p.read_text(encoding="utf-8")
+    try:
+        content = p.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise PromptError(f"Prompt file not found: {p}")
     if not content.strip():
         raise PromptError(f"Prompt file is empty: {p}")
 
@@ -66,7 +69,10 @@ def load_break(path: str | Path | None = None) -> str:
 
     for candidate in candidates:
         if candidate.exists() and candidate.is_file():
-            content = candidate.read_text(encoding="utf-8")
+            try:
+                content = candidate.read_text(encoding="utf-8")
+            except FileNotFoundError:
+                continue
             if not content.strip():
                 raise PromptError(f"BREAK.md is empty: {candidate}")
             return content
@@ -97,7 +103,10 @@ def load_run(path: str | Path | None = None) -> str | None:
 
     for candidate in candidates:
         if candidate.exists() and candidate.is_file():
-            content = candidate.read_text(encoding="utf-8")
+            try:
+                content = candidate.read_text(encoding="utf-8")
+            except FileNotFoundError:
+                continue
             if not content.strip():
                 raise PromptError(f"RUN.md is empty: {candidate}")
             return content
@@ -126,7 +135,10 @@ def load_scan(path: str | Path | None = None) -> str:
 
     for candidate in candidates:
         if candidate.exists() and candidate.is_file():
-            content = candidate.read_text(encoding="utf-8")
+            try:
+                content = candidate.read_text(encoding="utf-8")
+            except FileNotFoundError:
+                continue
             if not content.strip():
                 raise PromptError(f"SCAN.md is empty: {candidate}")
             return content

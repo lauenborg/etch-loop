@@ -287,9 +287,10 @@ class EtchDisplay:
         )
 
     def _refresh(self) -> None:
+        rendered = self._render()
         with self._lock:
             if self._live is not None:
-                self._live.update(self._render())
+                self._live.update(rendered)
 
     # ── Ticker thread ─────────────────────────────────────────────────────────
 
@@ -405,9 +406,10 @@ class InitDisplay:
         )
 
     def _refresh(self) -> None:
+        rendered = self._render()
         with self._lock:
             if self._live is not None:
-                self._live.update(self._render())
+                self._live.update(rendered)
 
     def _start_ticker(self) -> None:
         self._ticker_stop.clear()
@@ -486,6 +488,8 @@ def print_summary(stats: dict[str, Any]) -> None:
         title = f"[{RED}]x agent error[/{RED}]"
     elif reason == "git_error":
         title = f"[{RED}]x git error[/{RED}]"
+    elif reason == "stalled":
+        title = f"[{AMBER}]- stalled (fixer found nothing)[/{AMBER}]"
     else:
         title = f"[{FG}]done[/{FG}]"
 
