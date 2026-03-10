@@ -303,6 +303,9 @@ class EtchDisplay:
         self._ticker_stop.set()
         if self._ticker_thread is not None:
             self._ticker_thread.join(timeout=1.0)
+            if self._ticker_thread.is_alive():
+                with self._lock:
+                    self._live = None
             self._ticker_thread = None
 
     def _ticker_loop(self) -> None:
@@ -413,6 +416,9 @@ class InitDisplay:
         self._ticker_stop.set()
         if self._ticker_thread is not None:
             self._ticker_thread.join(timeout=1.0)
+            if self._ticker_thread.is_alive():
+                with self._lock:
+                    self._live = None
             self._ticker_thread = None
 
     def _ticker_loop(self) -> None:

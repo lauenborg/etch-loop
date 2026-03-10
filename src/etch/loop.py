@@ -157,6 +157,7 @@ def run(
             fixer_duration = time.monotonic() - fixer_start
 
             # ── Check for changes (skipped when no_git) ───────────────────────
+            changed = False
             if not no_git:
                 try:
                     changed = git.has_changes()
