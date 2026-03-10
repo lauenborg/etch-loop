@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import importlib.resources
-import shutil
 from pathlib import Path
-from typing import Optional
 
 import typer
 
-from etch import display, loop
+from etch import analyze, display, loop
 
 app = typer.Typer(
     name="etch",
@@ -18,27 +15,25 @@ app = typer.Typer(
     pretty_exceptions_show_locals=False,
 )
 
-_TEMPLATES = ["ETCH.md", "BREAK.md"]
-
 
 @app.command()
 def init() -> None:
-    """Copy ETCH.md and BREAK.md templates into the current directory."""
-    for filename in _TEMPLATES:
-        dest = Path.cwd() / filename
+    """Analyze the codebase and write tailored ETCH.md and BREAK.md."""
+    root = Path.cwd()
+    display.print_analyzing()
 
-        if dest.exists():
-            display.print_init_skip(filename)
-            continue
+    info = analyze.analyze(root)
 
-        try:
-            # Python 3.9+ traversable API
-            pkg_templates = importlib.resources.files("etch") / "templates" / filename
-            content = pkg_templates.read_text(encoding="utf-8")
-            dest.write_text(content, encoding="utf-8")
-            display.print_init_ok(filename)
-        except (FileNotFoundError, ModuleNotFoundError, TypeError) as exc:
-            display.print_error(f"Could not copy {filename}: {exc}")
+    _write_prompt(root / "ETCH.md", analyze.build_etch_md(info), "ETCH.md")
+    _write_prompt(root / "BREAK.md", analyze.build_break_md(info), "BREAK.md")
+
+
+def _write_prompt(dest: Path, content: str, label: str) -> None:
+    if dest.exists():
+        display.print_init_skip(label)
+        return
+    dest.write_text(content, encoding="utf-8")
+    display.print_init_ok(label)
 
 
 @app.command()

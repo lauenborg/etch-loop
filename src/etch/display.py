@@ -364,6 +364,11 @@ def print_error(message: str) -> None:
     )
 
 
+def print_analyzing() -> None:
+    """Print a status line while etch init analyzes the codebase."""
+    _console.print(f"[{AMBER}]{SYM_RUN}[/{AMBER}]  [{DIM}]analyzing codebase...[/{DIM}]")
+
+
 def print_init_ok(filename: str) -> None:
     """Print a success line for etch init."""
     _console.print(f"[{GREEN}]{SYM_OK}[/{GREEN}]  [{FG}]{filename}[/{FG}]")
