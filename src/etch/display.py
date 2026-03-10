@@ -376,8 +376,8 @@ class InitDisplay:
 
         table = Table.grid(padding=(0, 1))
         table.add_column(width=2)   # symbol
-        table.add_column(width=12)  # label
-        table.add_column()          # detail / scanbar
+        table.add_column(width=20)  # label
+        table.add_column()          # scanbar (only used while scanning)
 
         for sym, color, text in lines:
             table.add_row(
