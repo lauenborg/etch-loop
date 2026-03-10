@@ -8,7 +8,7 @@ from pathlib import Path
 from etch import agent, display, git, prompt, signals
 from etch.agent import AgentError
 from etch.git import GitError
-from etch.prompt import PromptError
+from etch.prompt import PromptError, load_scan
 
 
 def run(
@@ -45,7 +45,13 @@ def run(
         display.print_dry_run(prompt_text)
         return
 
-    # ── Load breaker prompt early to fail fast ────────────────────────────────
+    # ── Load scanner + breaker prompts early to fail fast ────────────────────
+    try:
+        scan_text = prompt.load_scan(prompt_path)
+    except PromptError as exc:
+        display.print_error(str(exc))
+        return
+
     try:
         break_text = prompt.load_break(prompt_path)
     except PromptError as exc:
@@ -53,6 +59,7 @@ def run(
         return
 
     if focus:
+        scan_text += f"\n\n## User focus\n\nConcentrate on: {focus}\n"
         break_text += f"\n\n## User focus\n\nConcentrate your adversarial review on: {focus}\n"
 
     start_time = time.monotonic()
@@ -71,13 +78,57 @@ def run(
             stats["iterations"] = iteration
             disp.start_iteration(iteration)
 
-            # ── Build fixer prompt for this iteration ─────────────────────────
+            # ── Scanner phase ─────────────────────────────────────────────────
+            disp.start_phase("scanner")
+            scanner_start = time.monotonic()
+            try:
+                scanner_output = agent.run(scan_text, verbose=verbose)
+            except AgentError as exc:
+                disp.finish_phase(
+                    "scanner",
+                    status="error",
+                    detail=str(exc),
+                    duration=time.monotonic() - scanner_start,
+                    success=False,
+                )
+                stats["reason"] = "agent_error"
+                break
+
+            scanner_duration = time.monotonic() - scanner_start
+            scanner_signal = signals.parse(scanner_output)
+            scanner_finding = signals.extract_finding(scanner_output)
+
+            if scanner_signal == "clear":
+                disp.finish_phase(
+                    "scanner",
+                    status="all clear",
+                    detail=scanner_finding or "nothing to fix",
+                    duration=scanner_duration,
+                    success=True,
+                )
+                stats["reason"] = "no_changes"
+                break
+
+            disp.finish_phase(
+                "scanner",
+                status="issues found",
+                detail=scanner_finding or "issues found",
+                duration=scanner_duration,
+                success=False,
+            )
+
+            # ── Build fixer prompt with scanner + breaker findings ─────────────
             fixer_prompt = prompt_text
+            fixer_prompt += (
+                f"\n\n## Scanner findings\n\n"
+                f"{scanner_output.strip()}\n\n"
+                f"Fix these specific issues.\n"
+            )
             if last_breaker_output:
                 fixer_prompt += (
                     f"\n\n## Breaker findings from previous iteration\n\n"
                     f"{last_breaker_output.strip()}\n\n"
-                    f"Address these specific findings first, then scan for anything new.\n"
+                    f"Also address these if not already covered above.\n"
                 )
 
             # ── Fixer phase ───────────────────────────────────────────────────

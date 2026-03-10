@@ -33,6 +33,7 @@ def init() -> None:
     except AgentError as exc:
         display.print_error(f"Agent analysis failed: {exc}\nFalling back to static analysis.")
 
+    _write_prompt(root / "SCAN.md", analyze.build_scan_md(info, agent_scope), "SCAN.md")
     _write_prompt(root / "ETCH.md", analyze.build_etch_md(info, agent_scope), "ETCH.md")
     _write_prompt(root / "BREAK.md", analyze.build_break_md(info, agent_scope), "BREAK.md")
 

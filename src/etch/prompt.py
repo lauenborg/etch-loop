@@ -73,3 +73,33 @@ def load_break(path: str | Path | None = None) -> str:
 
     searched = ", ".join(str(c) for c in candidates)
     raise PromptError(f"BREAK.md not found. Searched: {searched}")
+
+
+def load_scan(path: str | Path | None = None) -> str:
+    """Load and return the content of SCAN.md.
+
+    Searches alongside ETCH.md first, then cwd.
+
+    Raises:
+        PromptError: If SCAN.md cannot be found or is empty.
+    """
+    candidates: list[Path] = []
+
+    if path is not None:
+        p = Path(path)
+        if p.name.upper() == "SCAN.MD":
+            candidates.append(p)
+        else:
+            candidates.append(p.parent / "SCAN.md")
+
+    candidates.append(Path.cwd() / "SCAN.md")
+
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_file():
+            content = candidate.read_text(encoding="utf-8")
+            if not content.strip():
+                raise PromptError(f"SCAN.md is empty: {candidate}")
+            return content
+
+    searched = ", ".join(str(c) for c in candidates)
+    raise PromptError(f"SCAN.md not found. Searched: {searched}")
