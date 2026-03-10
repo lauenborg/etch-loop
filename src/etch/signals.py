@@ -6,36 +6,30 @@ _PUNCTUATION_ONLY = set("-=*_`~><|")
 
 
 def parse(output: str) -> str:
-    """Parse breaker agent output for control tokens.
+    """Parse agent output for control tokens.
 
-    Returns the signal corresponding to whichever token appears first.
-    If both appear, the earlier one wins. If neither appears, returns
-    "issues" as a fail-safe.
+    Tokens must appear alone on their own line (after stripping whitespace
+    and backtick wrappers). This prevents false matches when agents quote the
+    token strings in explanations like `ETCH_ALL_CLEAR`.
+
+    The first matching line wins. If neither token is found, returns "issues"
+    as a fail-safe.
 
     Returns:
-        "clear"  — ETCH_ALL_CLEAR found (and appears before ETCH_ISSUES_FOUND)
-        "issues" — ETCH_ISSUES_FOUND found, appears first, or neither found
+        "clear"  — ETCH_ALL_CLEAR found on its own line first
+        "issues" — ETCH_ISSUES_FOUND found on its own line first, or no token found
     """
     if not isinstance(output, str):
         return "issues"
 
-    clear_pos = output.find(_TOKEN_CLEAR)
-    issues_pos = output.find(_TOKEN_ISSUES)
+    for line in output.splitlines():
+        stripped = line.strip().strip("`").strip()
+        if stripped == _TOKEN_CLEAR:
+            return "clear"
+        if stripped == _TOKEN_ISSUES:
+            return "issues"
 
-    if clear_pos == -1 and issues_pos == -1:
-        # Fail-safe: no token found → assume issues
-        return "issues"
-
-    if clear_pos == -1:
-        return "issues"
-
-    if issues_pos == -1:
-        return "clear"
-
-    # Both found — whichever appears first wins
-    if clear_pos < issues_pos:
-        return "clear"
-    return "issues"
+    return "issues"  # fail-safe: no token found
 
 
 def extract_commit_message(output: str, fallback: str) -> str:
@@ -93,35 +87,23 @@ def extract_summary(output: str) -> str:
 
 
 def extract_finding(output: str) -> str:
-    """Extract first meaningful line before the signal token.
+    """Extract the last meaningful line before the signal token line.
 
-    Returns the first non-empty, non-header line that appears before
-    the signal token, or an empty string if nothing useful is found.
+    Scans line by line, stops at the first line that IS a token (exact match).
+    Returns the last non-empty, non-header line before that point.
     """
     if not isinstance(output, str) or not output.strip():
         return ""
 
-    # Find the position of either token
-    clear_pos = output.find(_TOKEN_CLEAR)
-    issues_pos = output.find(_TOKEN_ISSUES)
-
-    # Determine the cutoff point (use whichever token appears first)
-    cutoff = len(output)
-    if clear_pos >= 0 and issues_pos >= 0:
-        cutoff = min(clear_pos, issues_pos)
-    elif clear_pos >= 0:
-        cutoff = clear_pos
-    elif issues_pos >= 0:
-        cutoff = issues_pos
-
-    text_before = output[:cutoff].strip()
-    if not text_before:
-        return ""
-
-    lines = text_before.splitlines()
-    for line in reversed(lines):
+    lines_before: list[str] = []
+    for line in output.splitlines():
         stripped = line.strip().strip("`").strip()
-        # Skip empty lines, markdown headers, separator lines, and bare punctuation
+        if stripped in (_TOKEN_CLEAR, _TOKEN_ISSUES):
+            break
+        lines_before.append(line)
+
+    for line in reversed(lines_before):
+        stripped = line.strip().strip("`").strip()
         if not stripped:
             continue
         if stripped.startswith("#"):
