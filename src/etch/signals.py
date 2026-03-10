@@ -2,6 +2,7 @@
 
 _TOKEN_CLEAR = "ETCH_ALL_CLEAR"
 _TOKEN_ISSUES = "ETCH_ISSUES_FOUND"
+_PUNCTUATION_ONLY = set("-=*_`~><|")
 
 
 def parse(output: str) -> str:
@@ -65,13 +66,13 @@ def extract_finding(output: str) -> str:
 
     lines = text_before.splitlines()
     for line in reversed(lines):
-        stripped = line.strip()
-        # Skip empty lines, markdown headers, and separator lines
+        stripped = line.strip().strip("`").strip()
+        # Skip empty lines, markdown headers, separator lines, and bare punctuation
         if not stripped:
             continue
         if stripped.startswith("#"):
             continue
-        if all(c in "-=*_" for c in stripped):
+        if all(c in _PUNCTUATION_ONLY for c in stripped):
             continue
         return stripped
 
