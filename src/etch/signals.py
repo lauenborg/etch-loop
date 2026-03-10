@@ -99,7 +99,7 @@ def extract_summary(output: str) -> str:
         return ""
     m = re.search(r"<etch_summary>(.*?)</etch_summary>", output, re.DOTALL)
     if m:
-        return m.group(1).strip()
+        return " ".join(m.group(1).split())
     return ""
 
 

@@ -110,6 +110,8 @@ def run(
         raise AgentError("claude subprocess timed out waiting for exit")
 
     stderr_reader.join(timeout=10)
+    if stderr_reader.is_alive():
+        stderr_lines.append("[stderr reader timed out]")
 
     stderr_output = "".join(stderr_lines).strip()
 

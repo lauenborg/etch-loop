@@ -394,7 +394,7 @@ def _list_files(root: Path) -> list[str]:
     files = []
     try:
         for p in root.rglob("*"):
-            if p.is_file() and not any(part in _SKIP_DIRS for part in p.parts):
+            if p.is_file() and not any(part in _SKIP_DIRS for part in p.relative_to(root).parts):
                 try:
                     files.append(str(p.relative_to(root)))
                 except ValueError:
