@@ -85,21 +85,24 @@ def run(
 
             scanner_duration = time.monotonic() - scanner_start
             scanner_signal = signals.parse(scanner_output)
-            scanner_finding = signals.extract_finding(scanner_output)
+            scanner_detail = (
+                signals.extract_summary(scanner_output)
+                or signals.extract_finding(scanner_output)
+            )
 
             if scanner_signal == "clear":
                 disp.finish_phase("scanner", status="all clear",
-                                  detail=scanner_finding or "nothing to fix",
+                                  detail=scanner_detail or "nothing to fix",
                                   duration=scanner_duration, success=True)
-                iter_entry["scanner"] = {"status": "all clear", "detail": scanner_finding}
+                iter_entry["scanner"] = {"status": "all clear", "detail": scanner_detail}
                 stats["reason"] = "no_changes"
                 iteration_log.append(iter_entry)
                 break
 
             disp.finish_phase("scanner", status="issues found",
-                              detail=scanner_finding or "issues found",
+                              detail=scanner_detail or "issues found",
                               duration=scanner_duration, success=False)
-            iter_entry["scanner"] = {"status": "issues found", "detail": scanner_finding}
+            iter_entry["scanner"] = {"status": "issues found", "detail": scanner_detail}
 
             # ── Build fixer prompt ────────────────────────────────────────────
             fixer_prompt = prompt_text
@@ -151,6 +154,10 @@ def run(
                     # Fall through to breaker
 
             # ── Commit ────────────────────────────────────────────────────────
+            fixer_summary = (
+                signals.extract_summary(_fixer_output)
+                or signals.extract_commit_message(_fixer_output, fallback="")
+            )
             commit_msg = signals.extract_commit_message(
                 _fixer_output, fallback=f"fix(edge): iteration {iteration}"
             )
@@ -167,9 +174,10 @@ def run(
             disp.record_fix()
             stats["fixes"] += 1
             status_label = "changed" if (no_git or no_commit) else "committed"
-            disp.finish_phase("fixer", status=status_label, detail=commit_msg,
+            fixer_detail = fixer_summary or commit_msg
+            disp.finish_phase("fixer", status=status_label, detail=fixer_detail,
                               duration=fixer_duration, success=True)
-            iter_entry["fixer"] = {"status": status_label, "detail": commit_msg}
+            iter_entry["fixer"] = {"status": status_label, "detail": fixer_detail}
 
             # ── Breaker phase ─────────────────────────────────────────────────
             disp.start_phase("breaker")
@@ -187,13 +195,16 @@ def run(
             signal = signals.parse(breaker_output)
             last_breaker_signal = signal
             last_breaker_output = breaker_output if signal == "issues" else None
-            finding = signals.extract_finding(breaker_output)
+            breaker_detail = (
+                signals.extract_summary(breaker_output)
+                or signals.extract_finding(breaker_output)
+            )
 
             if signal == "clear":
                 disp.finish_phase("breaker", status="all clear",
-                                  detail=finding or "no issues found",
+                                  detail=breaker_detail or "no issues found",
                                   duration=breaker_duration, success=True)
-                iter_entry["breaker"] = {"status": "all clear", "detail": finding}
+                iter_entry["breaker"] = {"status": "all clear", "detail": breaker_detail}
                 stats["reason"] = "clear"
                 iteration_log.append(iter_entry)
                 break
@@ -201,9 +212,9 @@ def run(
                 disp.record_issue()
                 stats["issues"] += 1
                 disp.finish_phase("breaker", status="issues",
-                                  detail=finding or "issues found",
+                                  detail=breaker_detail or "issues found",
                                   duration=breaker_duration, success=False)
-                iter_entry["breaker"] = {"status": "issues", "detail": finding}
+                iter_entry["breaker"] = {"status": "issues", "detail": breaker_detail}
                 stats["reason"] = "issues"
                 iteration_log.append(iter_entry)
 
@@ -211,7 +222,9 @@ def run(
             stats["reason"] = "max_iterations"
 
         stats["elapsed"] = time.monotonic() - start_time
-        disp.print_summary(stats)
+
+    # Live panel is fully closed before printing anything below
+    display.print_summary(stats)
 
     # ── Write report ──────────────────────────────────────────────────────────
     try:

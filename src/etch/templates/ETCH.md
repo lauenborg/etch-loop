@@ -23,7 +23,11 @@ Scan the codebase for:
 
 Focus on: [edit this to narrow your scope, e.g. "src/auth/", "the payment module"]
 
-## Commit format
+## Output format
+
+After making your changes, write one line at the end of your output:
+  ETCH_SUMMARY: <concise summary, e.g. "fixed 3 issues — added null guards in auth.py, guarded empty input in parser.py">
+  ETCH_SUMMARY: no changes — nothing to fix
 
 The harness commits automatically. Each commit will be:
   fix(edge): <short description of what was fixed>

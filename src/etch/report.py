@@ -23,8 +23,10 @@ def write(
         Path to the written report file.
     """
     output_dir = output_dir or Path.cwd()
+    reports_dir = output_dir / "etch-reports"
+    reports_dir.mkdir(exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
-    path = output_dir / f"etch-report-{timestamp}.md"
+    path = reports_dir / f"etch-report-{timestamp}.md"
 
     lines: list[str] = []
     lines.append(f"# etch run — {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}\n")

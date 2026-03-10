@@ -451,6 +451,43 @@ def run_with_scan(label: str, fn: Callable[[], _T]) -> _T:
     return result[0]
 
 
+def print_summary(stats: dict[str, Any]) -> None:
+    """Standalone summary panel, called after the Live context exits."""
+    reason = stats.get("reason", "done")
+    elapsed = stats.get("elapsed", 0.0)
+    iterations = stats.get("iterations", 0)
+    fixes = stats.get("fixes", 0)
+    issues = stats.get("issues", 0)
+    elapsed_str = _format_elapsed(elapsed)
+
+    if reason == "clear":
+        title = f"[{GREEN}]+ all clear[/{GREEN}]"
+    elif reason == "interrupted":
+        title = f"[{AMBER}]- interrupted[/{AMBER}]"
+    elif reason == "max_iterations":
+        title = f"[{AMBER}]- stopped (max iterations)[/{AMBER}]"
+    elif reason == "no_changes":
+        title = f"[{GREEN}]+ clean — fixer found nothing[/{GREEN}]"
+    else:
+        title = f"[{FG}]done[/{FG}]"
+
+    body = (
+        f"[{DIM}]iterations[/{DIM}] [{FG}]{iterations}[/{FG}]   "
+        f"[{DIM}]fixes[/{DIM}] [{FG}]{fixes}[/{FG}]   "
+        f"[{DIM}]breaker issues[/{DIM}] [{FG}]{issues}[/{FG}]   "
+        f"[{DIM}]{elapsed_str} elapsed[/{DIM}]"
+    )
+
+    _console.print(
+        Panel(
+            body,
+            title=title,
+            border_style=Style(color=BORDER),
+            style=Style(bgcolor=BG),
+        )
+    )
+
+
 def print_dry_run(prompt_text: str) -> None:
     _console.print(
         Panel(
@@ -499,7 +536,11 @@ def print_init_skip(filename: str) -> None:
 
 
 def print_report_saved(path: Path) -> None:
-    _console.print(f"[{DIM}]{SYM_NEUTRAL}  report saved → {path}[/{DIM}]")
+    try:
+        display_path = path.relative_to(Path.cwd())
+    except ValueError:
+        display_path = path
+    _console.print(f"[{DIM}]-  report -> {display_path}[/{DIM}]")
 
 
 # ── Utilities ─────────────────────────────────────────────────────────────────

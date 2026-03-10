@@ -19,7 +19,10 @@ Be adversarial — think like someone actively trying to make this code fail.
 
 1. DO NOT edit any files — read only
 2. Report your findings clearly, one per line
-3. End your output with EXACTLY one of these tokens on its own line:
+3. Before the signal token, write one line starting with `ETCH_SUMMARY:` summarising what you found:
+   - `ETCH_SUMMARY: 2 issues — unguarded empty list in sorter.py:14, exception swallowed in loader.py:67`
+   - `ETCH_SUMMARY: no issues found — code looks solid`
+4. End your output with EXACTLY one of these tokens on its own line:
    - `ETCH_ISSUES_FOUND` — if you found anything worth fixing
    - `ETCH_ALL_CLEAR` — if the code looks solid
 

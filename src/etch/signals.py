@@ -66,11 +66,30 @@ def extract_commit_message(output: str, fallback: str) -> str:
             continue
         # Trim to a reasonable length and strip trailing punctuation
         msg = stripped[:72].rstrip(".,;:")
+        if not msg:
+            continue
         if not msg.lower().startswith("fix"):
             msg = f"fix(edge): {msg[0].lower()}{msg[1:]}"
         return msg
 
     return fallback
+
+
+def extract_summary(output: str) -> str:
+    """Extract the ETCH_SUMMARY line written by an agent.
+
+    Agents are prompted to write a line like:
+        ETCH_SUMMARY: fixed 3 null-guard issues in auth.py
+
+    Returns the summary text, or empty string if not found.
+    """
+    if not isinstance(output, str):
+        return ""
+    for line in output.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("ETCH_SUMMARY:"):
+            return stripped[len("ETCH_SUMMARY:"):].strip()
+    return ""
 
 
 def extract_finding(output: str) -> str:

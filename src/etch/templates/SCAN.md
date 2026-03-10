@@ -23,7 +23,10 @@ For each issue, include the file path, line number (if known), and a one-line de
 5. List each confirmed issue on its own line, e.g.:
    - src/auth.py:42 — crashes with empty token string (no guard)
    - src/api.js:108 — unhandled promise rejection will silently fail
-6. End your output with EXACTLY one of these tokens on its own line:
+6. Before the signal token, write one line starting with `ETCH_SUMMARY:` summarising what you found in plain English:
+   - `ETCH_SUMMARY: found 3 issues — null dereference in auth.py:42, off-by-one in parser.py:88, unhandled OSError in git.py:31`
+   - `ETCH_SUMMARY: no confirmed bugs found`
+7. End your output with EXACTLY one of these tokens on its own line:
    - `ETCH_ISSUES_FOUND` — if you found confirmed bugs worth fixing
    - `ETCH_ALL_CLEAR` — if the code looks solid or you found nothing certain
 
