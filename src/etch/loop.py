@@ -148,19 +148,9 @@ def run(
                                   detail=scanner_detail or "nothing to fix",
                                   duration=scanner_duration, success=True)
                 iter_entry["scanner"] = {"status": "all clear", "detail": scanner_detail}
-                runner_result = try_runner(iter_entry)
-                if runner_result == "error":
-                    stats["reason"] = "agent_error"
-                    iteration_log.append(iter_entry)
-                    break
-                elif runner_result == "issues":
-                    stats["reason"] = "issues"
-                    iteration_log.append(iter_entry)
-                    continue
-                else:  # "clear" or "skip"
-                    stats["reason"] = "no_changes"
-                    iteration_log.append(iter_entry)
-                    break
+                stats["reason"] = "no_changes"
+                iteration_log.append(iter_entry)
+                break
 
             disp.finish_phase("scanner", status="issues found",
                               detail=scanner_detail or "issues found",
@@ -216,19 +206,9 @@ def run(
                                       duration=fixer_duration, success=True)
                     iter_entry["fixer"] = {"status": "no changes", "detail": "nothing to fix"}
                     if last_breaker_signal != "issues":
-                        runner_result = try_runner(iter_entry)
-                        if runner_result == "error":
-                            stats["reason"] = "agent_error"
-                            iteration_log.append(iter_entry)
-                            break
-                        elif runner_result == "issues":
-                            stats["reason"] = "issues"
-                            iteration_log.append(iter_entry)
-                            continue
-                        else:  # "clear" or "skip"
-                            stats["reason"] = "no_changes"
-                            iteration_log.append(iter_entry)
-                            break
+                        stats["reason"] = "no_changes"
+                        iteration_log.append(iter_entry)
+                        break
                     iteration_log.append(iter_entry)
                     # Fall through to breaker
 
