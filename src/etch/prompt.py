@@ -108,7 +108,7 @@ def load_run(path: str | Path | None = None) -> str | None:
             except OSError:
                 continue
             if not content.strip():
-                return None
+                raise PromptError(f"RUN.md is empty: {candidate}")
             return content
 
     return None  # Optional phase — no error if absent

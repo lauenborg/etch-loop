@@ -107,7 +107,10 @@ def run(
     reader.join(timeout=timeout)
     if reader.is_alive():
         process.kill()
-        process.wait()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
         stderr_reader.join(timeout=10)
         if stderr_reader.is_alive():
             with lock:
@@ -118,7 +121,10 @@ def run(
         process.wait(timeout=10)
     except subprocess.TimeoutExpired:
         process.kill()
-        process.wait()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
         raise AgentError("claude subprocess timed out waiting for exit")
 
     stderr_reader.join(timeout=10)
