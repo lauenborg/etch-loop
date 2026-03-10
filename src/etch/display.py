@@ -216,6 +216,8 @@ class EtchDisplay:
             title = f"[{AMBER}]- stopped (max iterations)[/{AMBER}]"
         elif reason == "no_changes":
             title = f"[{GREEN}]+ clean — fixer found nothing[/{GREEN}]"
+        elif reason == "build_failed":
+            title = f"[{RED}]x build failed[/{RED}]"
         else:
             title = f"[{FG}]done[/{FG}]"
 

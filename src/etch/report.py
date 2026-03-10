@@ -87,6 +87,7 @@ def _reason_label(reason: str) -> str:
         "interrupted": "interrupted",
         "agent_error": "stopped — agent error",
         "git_error": "stopped — git error",
+        "build_failed": "stopped — build/tests failed",
     }.get(reason, reason)
 
 
