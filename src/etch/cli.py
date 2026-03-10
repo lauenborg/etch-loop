@@ -21,6 +21,8 @@ app = typer.Typer(
 def init() -> None:
     """Analyze the codebase with Claude and write tailored SCAN.md, ETCH.md, BREAK.md."""
     root = Path.cwd()
+    etch_dir = root / "etch-loop"
+    etch_dir.mkdir(exist_ok=True)
     info = analyze.analyze(root)
     init_prompt = analyze.build_init_prompt(info)
 
@@ -35,9 +37,9 @@ def init() -> None:
             disp.add_line(display.SYM_NEUTRAL, display.DIM, f"falling back to static analysis ({exc})")
 
         for dest, content, label in [
-            (root / "SCAN.md",  analyze.build_scan_md(info, agent_scope),  "SCAN.md"),
-            (root / "ETCH.md",  analyze.build_etch_md(info, agent_scope),  "ETCH.md"),
-            (root / "BREAK.md", analyze.build_break_md(info, agent_scope), "BREAK.md"),
+            (etch_dir / "SCAN.md",  analyze.build_scan_md(info, agent_scope),  "etch-loop/SCAN.md"),
+            (etch_dir / "ETCH.md",  analyze.build_etch_md(info, agent_scope),  "etch-loop/ETCH.md"),
+            (etch_dir / "BREAK.md", analyze.build_break_md(info, agent_scope), "etch-loop/BREAK.md"),
         ]:
             if dest.exists():
                 disp.add_line(display.SYM_NEUTRAL, display.DIM, f"{label} already exists, skipping")
@@ -53,7 +55,7 @@ def run(
         help="Optional focus description, e.g. 'the auth module' or 'error handling in payments'.",
     ),
     prompt: str = typer.Option(
-        "./ETCH.md",
+        "./etch-loop/ETCH.md",
         "--prompt",
         help="Path to the fixer prompt file (ETCH.md).",
         show_default=True,
