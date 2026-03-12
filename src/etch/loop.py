@@ -34,7 +34,6 @@ def run(
     prompt_path: str | Path,
     max_iterations: int = 20,
     no_commit: bool = False,
-    no_git: bool = False,
     dry_run: bool = False,
     verbose: bool = False,
     focus: str | None = None,
@@ -180,53 +179,49 @@ def run(
 
             fixer_duration = time.monotonic() - fixer_start
 
-            # ── Check for changes (skipped when no_git) ───────────────────────
-            changed = False
-            if not no_git:
+            # ── Check for changes ─────────────────────────────────────────────
+            try:
+                changed = git.has_changes()
+            except GitError as exc:
+                disp.finish_phase("fixer", status="error", detail=str(exc),
+                                  duration=fixer_duration, success=False)
+                stats["reason"] = "git_error"
+                iteration_log.append(iter_entry)
+                break
+
+            if not changed:
+                disp.finish_phase("fixer", status="no changes", detail="nothing to fix",
+                                  duration=fixer_duration, success=True)
+                iter_entry["fixer"] = {"status": "no changes", "detail": "nothing to fix"}
+                stats["reason"] = "stalled" if last_breaker_signal == "issues" else "no_changes"
+                iteration_log.append(iter_entry)
+                break
+
+            # ── Commit ────────────────────────────────────────────────────────
+            fixer_summary = (
+                signals.extract_summary(_fixer_output)
+                or signals.extract_commit_message(_fixer_output, fallback="")
+            )
+            commit_msg = signals.extract_commit_message(
+                _fixer_output, fallback=f"fix(edge): iteration {iteration}"
+            )
+            if not no_commit:
                 try:
-                    changed = git.has_changes()
+                    git.commit(commit_msg)
                 except GitError as exc:
-                    disp.finish_phase("fixer", status="error", detail=str(exc),
+                    disp.finish_phase("fixer", status="commit error", detail=str(exc),
                                       duration=fixer_duration, success=False)
                     stats["reason"] = "git_error"
                     iteration_log.append(iter_entry)
                     break
 
-                if not changed:
-                    disp.finish_phase("fixer", status="no changes", detail="nothing to fix",
-                                      duration=fixer_duration, success=True)
-                    iter_entry["fixer"] = {"status": "no changes", "detail": "nothing to fix"}
-                    stats["reason"] = "stalled" if last_breaker_signal == "issues" else "no_changes"
-                    iteration_log.append(iter_entry)
-                    break
-
-            # ── Commit ────────────────────────────────────────────────────────
-            if no_git or changed:
-                fixer_summary = (
-                    signals.extract_summary(_fixer_output)
-                    or signals.extract_commit_message(_fixer_output, fallback="")
-                )
-                commit_msg = signals.extract_commit_message(
-                    _fixer_output, fallback=f"fix(edge): iteration {iteration}"
-                )
-                if not no_git and not no_commit:
-                    try:
-                        git.commit(commit_msg)
-                    except GitError as exc:
-                        disp.finish_phase("fixer", status="commit error", detail=str(exc),
-                                          duration=fixer_duration, success=False)
-                        stats["reason"] = "git_error"
-                        iteration_log.append(iter_entry)
-                        break
-
-                if changed or no_git:
-                    disp.record_fix()
-                    stats["fixes"] += 1
-                status_label = "no-git" if no_git else ("changed" if no_commit else "committed")
-                fixer_detail = fixer_summary or commit_msg
-                disp.finish_phase("fixer", status=status_label, detail=fixer_detail,
-                                  duration=fixer_duration, success=True)
-                iter_entry["fixer"] = {"status": status_label, "detail": fixer_detail}
+            disp.record_fix()
+            stats["fixes"] += 1
+            status_label = "changed" if no_commit else "committed"
+            fixer_detail = fixer_summary or commit_msg
+            disp.finish_phase("fixer", status=status_label, detail=fixer_detail,
+                              duration=fixer_duration, success=True)
+            iter_entry["fixer"] = {"status": status_label, "detail": fixer_detail}
 
             # ── Breaker phase ─────────────────────────────────────────────────
             disp.start_phase("breaker")
@@ -234,18 +229,16 @@ def run(
             # Focus the breaker only on files the fixer actually changed.
             # This prevents the breaker from finding brand-new issues in
             # untouched files, which causes the loop to thrash.
-            # In --no-git mode we can't determine changed files, so skip scoping.
             effective_break_text = break_text
-            if not no_git:
-                recent_files = git.changed_files(since_commits=1)
-                if recent_files:
-                    files_list = "\n".join(f"- {f}" for f in recent_files)
-                    effective_break_text = break_text + (
-                        f"\n\n## Scope for this iteration\n\n"
-                        f"The fixer just changed these files — review ONLY these:\n"
-                        f"{files_list}\n\n"
-                        f"Do not scan files that were not changed.\n"
-                    )
+            recent_files = git.changed_files(since_commits=1)
+            if recent_files:
+                files_list = "\n".join(f"- {f}" for f in recent_files)
+                effective_break_text = break_text + (
+                    f"\n\n## Scope for this iteration\n\n"
+                    f"The fixer just changed these files — review ONLY these:\n"
+                    f"{files_list}\n\n"
+                    f"Do not scan files that were not changed.\n"
+                )
             try:
                 breaker_output = agent.run(effective_break_text, verbose=verbose)
             except AgentError as exc:
@@ -335,7 +328,7 @@ def run(
         if final_runner_entry:
             iteration_log.append({"n": "runner", "runner": final_runner_entry})
         report_path = report.write(stats, iteration_log, output_dir=prompt_path.parent)
-        if not no_git and not no_commit and stats["fixes"] > 0:
+        if not no_commit and stats["fixes"] > 0:
             try:
                 git.commit(f"etch: add run report {report_path.name}", paths=[str(report_path)])
             except GitError:
